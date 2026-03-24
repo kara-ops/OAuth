@@ -9,7 +9,7 @@ from app.database.redis import get_redis
 @asynccontextmanager
 async def lifespan(app:FastAPI):
     try :
-        db = Sessionlocal
+        db = Sessionlocal()
         db.execute(text("SELECT 1"))
         db.close()
         print("db working")
