@@ -7,3 +7,10 @@ engine = create_engine(settings.DATABASE_URL, pool_pre_ping = True)
 Sessionlocal = sessionmaker(bind=engine, autoflush = False, autocommit = False)
 
 Base = declarative_base()
+
+def get_db():
+    db = Sessionlocal()
+    try:
+        yield db
+    finally:
+        db.close

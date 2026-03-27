@@ -3,6 +3,7 @@ from sqlalchemy import text
 from contextlib import asynccontextmanager
 from app.database.postgres import Sessionlocal
 from app.database.redis import get_redis
+from app.router import auth_routers
 
 
 
@@ -24,6 +25,8 @@ async def lifespan(app:FastAPI):
         raise RuntimeError(F"Redis connection failed {e}")
     
     yield
+
+    app.include_router(auth_routers)
 
     print("App shuting down")
     

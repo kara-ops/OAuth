@@ -16,4 +16,3 @@ def get_or_create_user(db:Session, google_user:dict)->User:
         return create_user
     else:
         return get_user
-    
