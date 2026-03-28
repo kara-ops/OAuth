@@ -3,7 +3,7 @@ from sqlalchemy import text
 from contextlib import asynccontextmanager
 from app.database.postgres import Sessionlocal
 from app.database.redis import get_redis
-from app.router import auth_routers
+from app.router.auth_routers import router
 
 
 
@@ -26,10 +26,11 @@ async def lifespan(app:FastAPI):
     
     yield
 
-    app.include_router(auth_routers)
-
     print("App shuting down")
     
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+app.include_router(router)

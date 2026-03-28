@@ -6,7 +6,8 @@ from app.database.postgres import get_db
 from app.utils import oauth_client as oc
 from app.services import auth_service as a
 from app.core import security as s
-from app.schemas import Oauth_schema as os
+from app.schemas import Oauth_schema as ons
+from app.services import token_service as ts
 
 
 router = APIRouter(prefix="/auth/google", tags =["auth"])
@@ -18,16 +19,21 @@ def google_login():
         f"?client_id={settings.GOOGLE_CLIENT_ID}"
         f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
         f"&response_type=code"
-        f"&scope=openid email profile"
+        f"&scope=openid+email+profile"
     )
     return RedirectResponse(url)
 
 @router.get("/callback")
 #oauth_client = oc, auth_service = a, security = s, oauth_schema = os
 async def google_callback(code:str, db:Session = Depends(get_db)):
-    token_data = await oc.exchange_code_for_code(code)
-    access_token= token_data["access_token"]
+    try:
+        access_token = await oc.exchange_code_for_token(code)
+        print("access_token : ", access_token)
+    except Exception as e:
+        print("error:", e)
+        raise
 
+    
     get_user_data = await oc.get_google_user(access_token)
     user_info = get_user_data
 
@@ -35,7 +41,9 @@ async def google_callback(code:str, db:Session = Depends(get_db)):
 
     create_access =s.create_access_token(get_or_create.id)
     create_refresh =s.create_refresh_token(get_or_create.id)
-    return os.TokenResponse(access_token=create_access,refresh_token=create_refresh,token_type="bearer")
+
+    ts.store_refresh_token(get_or_create.id, create_refresh)
+    return ons.TokenResponse(access_token=create_access,refresh_token=create_refresh,token_type="bearer")
 
 
 
