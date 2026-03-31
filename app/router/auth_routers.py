@@ -43,38 +43,59 @@ async def google_callback(code:str, db:Session = Depends(get_db)):
     create_refresh = security.create_refresh_token(get_or_create.id)
 
     token_service.store_refresh_token(get_or_create.id, create_refresh)
-    return auth_service.TokenResponse(access_token=create_access,refresh_token=create_refresh,token_type="bearer")
+    return TokenResponse(access_token=create_access,refresh_token=create_refresh,token_type="bearer")
 
 
 @router.post("/refresh", response_model = TokenResponse )
 def refresh_logic(request:RefreshRequest):
-    decode_token = security.decode_token(request)
-    token_service.verify_refresh_token(decode_token["sub"],request)
+    decode_token = security.decode_token(request.refresh_token)
+
+    if decode_token["type"] != "refresh":
+        raise HTTPException(
+            status_code = 401,
+            detail = "Invalid token"
+        )
+    
+    verify = token_service.verify_refresh_token(decode_token["sub"],request.refresh_token)
+    if not verify:
+        raise HTTPException(
+            status_code = 401, 
+            detail = "Invalid token"
+        )
+    
     token_service.delete_refresh_token(decode_token["sub"])
-    create_refresh = security.create_refresh_token(decode_token["sub"])
-    create_access = security.create_access_token(decode_token["sub"])
+
+    create_refresh = security.create_refresh_token(int(decode_token["sub"]))
+    create_access = security.create_access_token(int(decode_token["sub"]))
+
     token_service.store_refresh_token(decode_token["sub"], create_refresh)
-    return {
-        "access_token":create_access,
-        "refesh_token":create_refresh
-    }
+
+    return TokenResponse(access_token=create_access, refresh_token=create_refresh,token_type="bearer")
 
 @router.post("/logout")
 def logout(authorization: str = Header()):
     try:
         scheme,access = authorization.split()
-        if scheme != "bearer":
+        if scheme.lower() != "bearer":
             raise Exception()
     except ValueError:
         raise HTTPException(
             status_code = 401,
             detail = "Invalid token"
         )
+    
     decode = security.decode_token(access)
-    remain_ttl = decode["exp"] - datetime.now().timestamp()
+    if decode["type"] != "access":
+        raise HTTPException(
+            status_code = 401,
+            detail = "Invalid token"
+        )
+
+    remain_ttl = int(decode["exp"] - datetime.now(timezone.utc).timestamp())
     if remain_ttl <0:
         remain_ttl = 0
     token_service.blacklist_token(decode["jti"],remain_ttl)
+
     token_service.delete_refresh_token(decode["sub"])
     return {
         "message":"logged out"
