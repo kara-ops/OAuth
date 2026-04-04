@@ -30,12 +30,12 @@ def is_blacklisted(jti:str)->bool:
 def rate_limiter(ip:str)->bool:
     redis = get_redis()
     ttl = 60
-    key = f"Login attempts: {ip}"
+    key = f"login attempts:{ip}"
     attemps = redis.incr(key)
     if attemps == 1:
         redis.expire(key, ttl)
 
-    if attemps == 5:
+    if attemps >= 5:
         return False
     else:
         return True
