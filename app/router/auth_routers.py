@@ -43,7 +43,6 @@ async def google_callback(code:str, db:Session = Depends(get_db)):
         access_token = await oauth_client.exchange_code_for_token(code)
         print("access_token : ", access_token)
     except Exception as e:
-        print("error:", e)
         raise
 
     
@@ -115,9 +114,7 @@ def logout(authorization: str = Header()):
     }
 
 
-@router.get("/me", response_model = UserPublic)
-def user_info(current_user = Depends(get_current_user)):
-    return current_user
+
 
 
 
