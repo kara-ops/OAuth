@@ -24,7 +24,7 @@ import os
 # Add the project root (OAUTH/) to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.database.postgres import Base 
-from app.models import user_model
+from app.models.user_model import User,UserAuth
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
