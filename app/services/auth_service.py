@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user_model import User,UserAuth
-from fastapi import Request
+from fastapi import Request,HTTPException
+from app.utils.hashing import hash_password
 
 
 def get_or_create_user(db:Session, google_user:dict)->User:
@@ -38,4 +39,28 @@ def get_or_create_user(db:Session, google_user:dict)->User:
         db.commit()
         db.refresh(user_auth)
         return user
+    
+def create_l_user(email:str,password:str,db:Session):
+    email = db.query(User).filter(User.email==email).first()
+    if email:
+        raise HTTPException(status_code=400,detail="email already in use")
+    h_pass = hash_password(password)
+    create = User(
+        email = email
+    )
+    db.add(create)
+    db.flush()
+    auth = UserAuth(
+        provider = "local",
+        user_id = create.id
+    )
+    db.add(auth)
+    db.commit()
+    db.refresh(auth)
+
+
+
+
+
+
     

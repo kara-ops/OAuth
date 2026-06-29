@@ -1,4 +1,4 @@
-from fastapi import APIRouter,Depends, Header, HTTPException, Request
+from fastapi import APIRouter,Depends, Header, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 from fastapi.responses import RedirectResponse
 from app.core.config import settings
@@ -59,8 +59,9 @@ async def google_callback(code:str, db:Session = Depends(get_db)):
 
 
 @router.post("/refresh", response_model = TokenResponse )
-def refresh_logic(request:RefreshRequest):
-    decode_token = security.decode_token(request.refresh_token)
+def refresh_logic(req:Request,res:Response):
+    refresh_token = req.cookies.get("refresh")
+    decode_token = security.decode_token(refresh_token)
 
     if decode_token["type"] != "refresh":
         raise HTTPException(
@@ -68,7 +69,7 @@ def refresh_logic(request:RefreshRequest):
             detail = "Invalid token"
         )
     
-    verify = token_service.verify_refresh_token(decode_token["sub"],request.refresh_token)
+    verify = token_service.verify_refresh_token(decode_token["sub"],refresh_token)
     if not verify:
         raise HTTPException(
             status_code = 401, 
@@ -81,8 +82,19 @@ def refresh_logic(request:RefreshRequest):
     create_access = security.create_access_token(int(decode_token["sub"]))
 
     token_service.store_refresh_token(decode_token["sub"], create_refresh)
+    res.set_cookie(
+        key="refresh",
+        max_age=60*60*24*7,
+        value=create_refresh,
+        secure=True,
+        samesite="lax",
+        httponly=True,
 
-    return TokenResponse(access_token=create_access, refresh_token=create_refresh,token_type="bearer")
+    )
+
+
+
+    return TokenResponse(access_token=create_access,token_type="bearer")
 
 @router.post("/logout")
 def logout(authorization: str = Header()):
