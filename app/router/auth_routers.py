@@ -38,7 +38,7 @@ def google_login(request : Request)->str:
 
 @router.get("/callback")
 #oauth_client = oc, auth_service = a, security = s, oauth_schema = os
-async def google_callback(code:str, db:Session = Depends(get_db)):
+async def google_callback(res:Response,code:str, db:Session = Depends(get_db)):
     try:
         access_token = await oauth_client.exchange_code_for_token(code)
         print("access_token : ", access_token)
@@ -55,7 +55,16 @@ async def google_callback(code:str, db:Session = Depends(get_db)):
     create_refresh = security.create_refresh_token({"sub":get_or_create.id})
 
     token_service.store_refresh_token(get_or_create.id, create_refresh)
-    return TokenResponse(access_token=create_access,refresh_token=create_refresh,token_type="bearer")
+    res.set_cookie(
+        key="refresh",
+        value=create_refresh,
+        max_age=60*60*24*7,
+        samesite="lax",
+        httponly=True,
+        secure=True
+    )
+
+    return TokenResponse(access_token=create_access,token_type="bearer")
 
 
 @router.post("/refresh", response_model = TokenResponse )
@@ -89,15 +98,14 @@ def refresh_logic(req:Request,res:Response):
         secure=True,
         samesite="lax",
         httponly=True,
-
-    )
+        )
 
 
 
     return TokenResponse(access_token=create_access,token_type="bearer")
 
 @router.post("/logout")
-def logout(authorization: str = Header()):
+def logout(res:Response,authorization: str = Header()):
     try:
         scheme,access = authorization.split()
         if scheme.lower() != "bearer":
@@ -122,6 +130,7 @@ def logout(authorization: str = Header()):
     token_service.blacklist_token(decode["jti"],remain_ttl)
 
     token_service.delete_refresh_token(decode["sub"])
+    res.delete_cookie("refresh")
     return {
         "message":"logged out"
     }
