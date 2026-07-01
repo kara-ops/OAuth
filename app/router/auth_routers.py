@@ -8,12 +8,12 @@ from app.services import auth_service
 from app.core import security 
 from datetime import datetime, timezone
 from app.services import token_service 
-from app.schemas.Oauth_schema import RefreshRequest, TokenResponse, UserPublic
+from app.schemas.Oauth_schema import RefreshRequest, TokenResponse, UserPublic, UserLogin
 from app.core.dependencies import get_current_user
 
-router = APIRouter(prefix="/auth/google", tags =["auth"])
+router = APIRouter(prefix="/auth", tags =["auth"])
 
-@router.get("/login")
+@router.get("/oauth")
 def google_login(request : Request)->str:
     x_forwarded_for = request.headers.get("x-forwarded-for")
     if x_forwarded_for:
@@ -36,7 +36,7 @@ def google_login(request : Request)->str:
     )
     return RedirectResponse(url)
 
-@router.get("/callback")
+@router.get("/google/callback")
 #oauth_client = oc, auth_service = a, security = s, oauth_schema = os
 async def google_callback(res:Response,code:str, db:Session = Depends(get_db)):
     try:
@@ -134,6 +134,22 @@ def logout(res:Response,authorization: str = Header()):
     return {
         "message":"logged out"
     }
+
+@router.post("/login")
+def local_login(res:Response,user:UserLogin,db:Session=Depends(get_db)):
+    login = auth_service.login_l_user(user.email,user.password,db)
+    access = security.create_access_token(login.id)
+    refresh = security.create_refresh_token(login.id)
+    res.set_cookie(
+        key="refresh",
+        value=refresh,
+        max_age=60*60*24*7,
+        samesite="lax",
+        httponly=True,
+        secure=True
+    )
+    return {"access_token":access,"token_type":"bearer"}
+    
 
 
 
