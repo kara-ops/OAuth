@@ -40,29 +40,42 @@ def get_or_create_user(db:Session, google_user:dict)->User:
         db.refresh(user_auth)
         return user
     
-def create_l_user(email:str,password:str,db:Session):
-    email = db.query(User).filter(User.email==email).first()
+def create_l_user(email_id:str,password:str,db:Session):
+    hash_pass = hash_password(password)
+    email = db.query(User).filter(User.email==email_id).first()
     if email:
-        raise HTTPException(status_code=400,detail="Email already in use")
-    h_pass = hash_password(password)
+        check = db.query(UserAuth).filter(UserAuth.user_id==email.id,UserAuth.provider=="local").first()# further here too add passowrd login feature
+        if check:
+            raise HTTPException(status_code=403,detail="This email is already in use")
+        user_auth = UserAuth(
+            provider="local",
+            user_id = email.id,
+            hashed_password=hash_pass
+        )
+        return email
     create = User(
-        email = email
+        email = email_id
     )
     db.add(create)
     db.flush()
     auth = UserAuth(
         provider = "local",
-        user_id = create.id
+        user_id = create.id,
+        hashed_password=hash_pass
     )
     db.add(auth)
     db.commit()
     db.refresh(auth)
+    return create
 
-def login_l_user(email:str,password:str,db:Session):
-    email = db.query(User).filter(User.email==email).first()
+def login_l_user(email_id:str,password:str,db:Session):
+    email = db.query(User).filter(User.email==email_id).first()
     if not email:
         raise HTTPException(status_code=400,detail="User does not exist")
-    if not verify_password(password,email.auth.hashed_password):
+    check = db.query(UserAuth).filter(UserAuth.user_id==email.id,UserAuth.provider=="local").first()
+    if not check:
+        raise HTTPException(status_code=400,detail="Add password to this email through create user")
+    if not verify_password(password,check.hashed_password):
         raise HTTPException(status_code=400,detail="Wrong password")
     return email
 

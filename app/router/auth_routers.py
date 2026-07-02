@@ -149,6 +149,22 @@ def local_login(res:Response,user:UserLogin,db:Session=Depends(get_db)):
         secure=True
     )
     return {"access_token":access,"token_type":"bearer"}
+
+@router.post("/create_user")
+def create_local_user(res:Response,user:UserLogin,db:Session=Depends(get_db)):
+    create = auth_service.create_l_user(user.email,user.password,db)
+    access = security.create_access_token(create.id)
+    refresh = security.create_refresh_token(create.id)
+    res.set_cookie(
+        key="refresh",
+        value=refresh,
+        max_age=60*60*24*7,
+        samesite="lax",
+        httponly=True,
+        secure=True
+
+    )
+    return {"access_token":access,"type":"bearer"}
     
 
 
