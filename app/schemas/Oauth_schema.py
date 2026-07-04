@@ -18,7 +18,7 @@ class UserPublic(BaseModel):
     class Config:
         from_attributes = True
 
-class RestPassword(BaseModel):
+class ResetPassword(BaseModel):
     current_password:str
     new_password:str
 

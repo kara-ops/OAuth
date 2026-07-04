@@ -102,8 +102,7 @@ def reset_pass(user_id:int,new_password:str,current_password:str,db:Session):
 
     if not verify_password(current_password,auth_check.hashed_password):
         raise HTTPException(status_code=400,detail="incorrect current password")
-    auth_check.hashed_password==new_pass
-    db.add(auth_check)
+    auth_check.hashed_password=new_pass
     db.commit()
     return {"successfully changed"}
 
