@@ -18,6 +18,10 @@ class UserPublic(BaseModel):
     class Config:
         from_attributes = True
 
+class RestPassword(BaseModel):
+    current_password:str
+    new_password:str
+
 
 
 

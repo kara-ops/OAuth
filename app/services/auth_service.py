@@ -72,15 +72,40 @@ def login_l_user(email_id:str,password:str,db:Session):
     email = db.query(User).filter(User.email==email_id).first()
     if not email:
         raise HTTPException(status_code=400,detail="User does not exist")
+    
     check = db.query(UserAuth).filter(UserAuth.user_id==email.id,UserAuth.provider=="local").first()
+
     if not check:
         raise HTTPException(status_code=400,detail="Add password to this email through create user")
+    
     if not verify_password(password,check.hashed_password):
         raise HTTPException(status_code=400,detail="Wrong password")
+    
     return email
 
 
+def reset_pass(user_id:int,new_password:str,current_password:str,db:Session):
+    if current_password == new_password:
+        raise HTTPException(status_code=400,detail="new password cannot be same as current one")
+    
+    check = db.query(User).filter(User.id==user_id).first()
+    if not check:
+        raise HTTPException(status_code=400,detail="User does not exist")
+    
+    auth_check = db.query(UserAuth).filter(UserAuth.user_id==user_id,UserAuth.provider=="local").first()
 
+    if not auth_check:
+        raise HTTPException(status_code=400,detail="login with email password first")
+    
+    new_pass = hash_password(new_password)
+    curr_pass = hash_password(current_password)
+
+    if not verify_password(current_password,auth_check.hashed_password):
+        raise HTTPException(status_code=400,detail="incorrect current password")
+    auth_check.hashed_password==new_pass
+    db.add(auth_check)
+    db.commit()
+    return {"successfully changed"}
 
 
 
