@@ -7,7 +7,7 @@ from app.utils.hashing import hash_password,verify_password
 def get_or_create_user(db:Session, google_user:dict)->User:
     email = db.query(User).filter(User.email==google_user["email"]).first()
     if email:
-        check = db.query(UserAuth).filter(UserAuth.user_id==email.user_id).first()
+        check = db.query(UserAuth).filter(UserAuth.user_id==email.id).first()
         if check:
             return email
         else:
@@ -18,10 +18,10 @@ def get_or_create_user(db:Session, google_user:dict)->User:
             )
             email.avatar_url = google_user["picture"]
             email.name = google_user["name"]
-        db.add(create_user)
-        db.commit()
-        db.refresh(create_user)
-        return email
+            db.add(create_user)
+            db.commit()
+            db.refresh(create_user)
+            return email
     else:
         user = User(
             email = google_user["email"],
@@ -52,6 +52,8 @@ def create_l_user(email_id:str,password:str,db:Session):
             user_id = email.id,
             hashed_password=hash_pass
         )
+        db.add(user_auth)
+        db.commit()
         return email
     create = User(
         email = email_id
@@ -98,7 +100,6 @@ def reset_pass(user_id:int,new_password:str,current_password:str,db:Session):
         raise HTTPException(status_code=400,detail="login with email password first")
     
     new_pass = hash_password(new_password)
-    curr_pass = hash_password(current_password)
 
     if not verify_password(current_password,auth_check.hashed_password):
         raise HTTPException(status_code=400,detail="incorrect current password")

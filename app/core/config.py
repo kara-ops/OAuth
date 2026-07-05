@@ -15,6 +15,9 @@ class Settings(BaseSettings):
 
     REDIS_URL : str 
 
+    RESEND_API_KEY:str
+    RESEND_FROM_EMAIL:str = "onboarding@resend.dev"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
