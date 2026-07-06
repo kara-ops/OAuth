@@ -2,7 +2,9 @@ from sqlalchemy.orm import Session
 from app.models.user_model import User,UserAuth
 from fastapi import Request,HTTPException
 from app.utils.hashing import hash_password,verify_password
-
+from app.utils.code_gen import gen_code
+from app.services.token_service import forgot_pass_key,get_forgot_pass_key
+from app.utils.email_service import forgot_pass_mail
 
 def get_or_create_user(db:Session, google_user:dict)->User:
     email = db.query(User).filter(User.email==google_user["email"]).first()
@@ -106,6 +108,20 @@ def reset_pass(user_id:int,new_password:str,current_password:str,db:Session):
     auth_check.hashed_password=new_pass
     db.commit()
     return {"successfully changed"}
+
+def forgot_password(email:str,db:Session):
+    check = db.query(User).filter(User.email==email).first()
+    if not check:
+        return {"You will recieve a email with a code"}
+    
+    code = gen_code()
+    set_code = forgot_pass_key(check.id,code)
+    mail = forgot_pass_mail(code,"gay")
+    return {"You will recieve a email with a code"}
+
+
+
+    
 
 
 
