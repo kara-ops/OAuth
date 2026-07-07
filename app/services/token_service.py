@@ -40,15 +40,20 @@ def rate_limiter(ip:str)->bool:
     else:
         return True
     
-def forgot_pass_key(user_id:int,code:str):
+def forgot_pass_key(token:str,user_id:int,code:str):
     redis = get_redis()
-    ttl = 60*3
-    key = f"reset:{user_id}:{code}"
-    redis.setex(key,ttl,1)
+    ttl = 60*8
+    key = f"reset:{token}:{code}"
+    redis.setex(key,ttl,user_id)
 
-def get_forgot_pass_key(user_id:int,code:str):
+def get_forgot_pass_key(token:str,code:str):
     redis = get_redis()
-    key = f"reset:{user_id}:{code}"
-    return redis.exists(key)==1
+    key = f"reset:{token}:{code}"
+    return redis.get(key)
+
+def del_forgot_pass_key(token:str,code:str):
+    redis = get_redis()
+    key = f"reset:{token}:{code}"
+    redis.delete(key)
 
 

@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from app.models.user_model import User,UserAuth
 from fastapi import Request,HTTPException
 from app.utils.hashing import hash_password,verify_password
-from app.utils.code_gen import gen_code
-from app.services.token_service import forgot_pass_key,get_forgot_pass_key
+from app.utils.code_gen import gen_code,gen_url_token
+from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key
 from app.utils.email_service import forgot_pass_mail
 
 def get_or_create_user(db:Session, google_user:dict)->User:
@@ -44,7 +44,9 @@ def get_or_create_user(db:Session, google_user:dict)->User:
     
 def create_l_user(email_id:str,password:str,db:Session):
     hash_pass = hash_password(password)
+
     email = db.query(User).filter(User.email==email_id).first()
+
     if email:
         check = db.query(UserAuth).filter(UserAuth.user_id==email.id,UserAuth.provider=="local").first()# further here too add passowrd login feature
         if check:
@@ -54,9 +56,14 @@ def create_l_user(email_id:str,password:str,db:Session):
             user_id = email.id,
             hashed_password=hash_pass
         )
-        db.add(user_auth)
-        db.commit()
+        try:
+            db.add(user_auth)
+            db.commit()
+        except:
+            db.rollback()
+            raise
         return email
+    
     create = User(
         email = email_id
     )
@@ -67,15 +74,20 @@ def create_l_user(email_id:str,password:str,db:Session):
         user_id = create.id,
         hashed_password=hash_pass
     )
-    db.add(auth)
-    db.commit()
-    db.refresh(auth)
+    try:
+        db.add(auth)
+        db.commit()
+        db.refresh(auth)
+    except:
+        db.rollback()
+        raise
+
     return create
 
 def login_l_user(email_id:str,password:str,db:Session):
     email = db.query(User).filter(User.email==email_id).first()
     if not email:
-        raise HTTPException(status_code=400,detail="User does not exist")
+        raise HTTPException(status_code=400,detail="Wrong credentials")
     
     check = db.query(UserAuth).filter(UserAuth.user_id==email.id,UserAuth.provider=="local").first()
 
@@ -83,7 +95,7 @@ def login_l_user(email_id:str,password:str,db:Session):
         raise HTTPException(status_code=400,detail="Add password to this email through create user")
     
     if not verify_password(password,check.hashed_password):
-        raise HTTPException(status_code=400,detail="Wrong password")
+        raise HTTPException(status_code=400,detail="Wrong credentials")
     
     return email
 
@@ -105,23 +117,56 @@ def reset_pass(user_id:int,new_password:str,current_password:str,db:Session):
 
     if not verify_password(current_password,auth_check.hashed_password):
         raise HTTPException(status_code=400,detail="incorrect current password")
-    auth_check.hashed_password=new_pass
-    db.commit()
+    
+    try:
+       auth_check.hashed_password=new_pass
+
+       db.commit()
+    except:
+        db.rollback()
+        raise
+
     return {"successfully changed"}
 
 def forgot_password(email:str,db:Session):
-    check = db.query(User).filter(User.email==email).first()
+    check = db.query(UserAuth).join(User).filter(User.email==email,UserAuth.provider=="local").first()
     if not check:
-        return {"You will recieve a email with a code"}
+        return {"If an account exists, we've sent you instructions"}
     
-    code = gen_code()
-    set_code = forgot_pass_key(check.id,code)
-    mail = forgot_pass_mail(code,"gay")
-    return {"You will recieve a email with a code"}
+    code = gen_code()  #generate a unique code
+    url_token = gen_url_token()  #generate token for the url
+
+    set_code = forgot_pass_key(url_token,check.user_id,code)  #code is joint with
+
+    mail = forgot_pass_mail(code,f"http://127.0.0.1:8000/auth/set_password?token={url_token}")
+
+    return {"If an account exists, we've sent you instructions"}
 
 
 
+def new_password(code:str,password:str,db:Session,token:str):
+    user_id = get_forgot_pass_key(token,code)
+    if user_id is None:
+        raise HTTPException(status_code=400,detail="Invalid or expired code")
+
+    new_pass = hash_password(password)
+
+    check = db.query(UserAuth).filter(UserAuth.user_id==user_id,UserAuth.provider=="local").first()
+
+    try:
+
+        check.hashed_password=new_pass
+
+        db.commit()
+
+        redis_call = del_forgot_pass_key(token,code)
+    except:
+        db.rollback()
+        raise
     
+    return {"Password changed successfully"}
+
+
 
 
 

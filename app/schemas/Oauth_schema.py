@@ -22,6 +22,13 @@ class ResetPassword(BaseModel):
     current_password:str
     new_password:str
 
+class ForgotPass(BaseModel):
+    email:str
+
+class SetPassword(BaseModel):
+    code:str
+    new_password:str
+
 
 
 

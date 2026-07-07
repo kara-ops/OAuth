@@ -9,7 +9,7 @@ from app.core import security
 from datetime import datetime, timezone
 from app.services import token_service 
 from app.models.user_model import User
-from app.schemas.Oauth_schema import RefreshRequest, TokenResponse, UserPublic, UserLogin, ResetPassword
+from app.schemas.Oauth_schema import RefreshRequest, TokenResponse, UserPublic, UserLogin, ResetPassword, ForgotPass, SetPassword
 from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/auth", tags =["auth"])
@@ -169,11 +169,20 @@ def create_local_user(res:Response,user:UserLogin,db:Session=Depends(get_db)):
     
 
 
-@router.post("/reset_password")
+@router.patch("/reset_password")
 def reset_password(user:ResetPassword,db:Session=Depends(get_db),auth:User=Depends(get_current_user)):
     call_func = auth_service.reset_pass(auth.id,user.new_password,user.current_password,db)
     return call_func
 
+
+@router.post("/forgot_password")
+def forgot_pass(user:ForgotPass,db:Session=Depends(get_db)):
+    return auth_service.forgot_password(user.email,db)
+
+@router.patch("/set_password")
+def set_password(token:str,user:SetPassword,db:Session=Depends(get_db)):
+    call_func = auth_service.new_password(user.code,user.new_password,db,token)
+    return call_func
 
 
     
