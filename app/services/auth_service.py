@@ -1,10 +1,16 @@
 from sqlalchemy.orm import Session
-from app.models.user_model import User,UserAuth
+from app.models.user_model import User,UserAuth,Session
 from fastapi import Request,HTTPException
+
 from app.utils.hashing import hash_password,verify_password
-from app.utils.code_gen import gen_code,gen_url_token
-from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key
+from app.utils.code_gen import gen_code,gen_url_token,get_uuid
 from app.utils.email_service import forgot_pass_mail
+from app.utils.time_calc import c_plus_d
+
+from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key
+
+from app.core.security import create_access_token,create_refresh_token
+
 
 def get_or_create_user(db:Session, google_user:dict)->User:
     email = db.query(User).filter(User.email==google_user["email"]).first()
@@ -43,41 +49,52 @@ def get_or_create_user(db:Session, google_user:dict)->User:
         return user
     
 def create_l_user(email_id:str,password:str,db:Session):
-    hash_pass = hash_password(password)
-
     email = db.query(User).filter(User.email==email_id).first()
 
     if email:
-        check = db.query(UserAuth).filter(UserAuth.user_id==email.id,UserAuth.provider=="local").first()# further here too add passowrd login feature
-        if check:
-            raise HTTPException(status_code=403,detail="This email is already in use")
-        user_auth = UserAuth(
-            provider="local",
-            user_id = email.id,
-            hashed_password=hash_pass
-        )
-        try:
-            db.add(user_auth)
-            db.commit()
-        except:
-            db.rollback()
-            raise
-        return email
+        raise HTTPException(status_code=400,detail="Email already registered")
+    
+    hash_pass = hash_password(password)
+
+    uuid_code = get_uuid()
     
     create = User(
         email = email_id
     )
+
     db.add(create)
     db.flush()
+    
+    expiry = c_plus_d(7)
+
+    add_s = Session(
+
+        session_id = uuid_code,
+        user_id = create.id,
+
+        r_token_hash = "empty",
+        
+        expires_at = expiry
+        
+        )
+    
+    db.add(add_s)
+    db.flush()
+
+    add_s.r_token_hash = "trial"
+
+
     auth = UserAuth(
         provider = "local",
         user_id = create.id,
         hashed_password=hash_pass
     )
+
     try:
+        db.add(create)
         db.add(auth)
         db.commit()
-        db.refresh(auth)
+        db.refresh(create)
     except:
         db.rollback()
         raise
@@ -166,8 +183,25 @@ def new_password(code:str,password:str,db:Session,token:str):
     
     return {"Password changed successfully"}
 
+def add_password(user_id:int,password:str,db:Session):
+    check = db.query(UserAuth).filter(UserAuth.user_id==user_id,UserAuth.provider=="local").first()
+    if check is not None:
+        raise HTTPException(status_code=400,detail="This email has a password, to change password use forgot-password or resent password")
+    
+    hash_pass = hash_password(password)
 
-
+    add_auth = UserAuth(
+        user_id = user_id,
+        provider = "local",
+        hashed_password = hash_pass
+    )
+    try:
+        db.add(add_auth)
+        db.commit()
+    except:
+        db.rollback()
+        raise
+    return {"Password added successfully"}
 
 
     
