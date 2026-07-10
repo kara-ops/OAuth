@@ -33,8 +33,8 @@ class UserAuth(Base):
     user = relationship("User",back_populates="auth")
 
 
-class Session(Base):
-    __tablename__ = "sessions"
+class UserSession(Base):
+    __tablename__ = "user_session"
     id = Column(Integer,primary_key=True,nullable=False)
     session_id = Column(UUID,unique=True,nullable=False)
     user_id = Column(Integer,ForeignKey("users.id"),nullable=False,index=True)

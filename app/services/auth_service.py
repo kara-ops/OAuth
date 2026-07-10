@@ -1,11 +1,12 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import UserSession
 from app.models.user_model import User,UserAuth,Session
 from fastapi import Request,HTTPException
 
 from app.utils.hashing import hash_password,verify_password
-from app.utils.code_gen import gen_code,gen_url_token,get_uuid
+from app.utils.code_gen import gen_code,gen_url_token,get_uuid,user_agent_parse,sha_hash
 from app.utils.email_service import forgot_pass_mail
 from app.utils.time_calc import c_plus_d
+
 
 from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key
 
@@ -48,14 +49,14 @@ def get_or_create_user(db:Session, google_user:dict)->User:
         db.refresh(user_auth)
         return user
     
-def create_l_user(email_id:str,password:str,db:Session):
-    email = db.query(User).filter(User.email==email_id).first()
+def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
+    email = db.query(User).filter(User.email==email_id).first()  #db search for user exist or not
 
     if email:
         raise HTTPException(status_code=400,detail="Email already registered")
     
+    ua_parsed = user_agent_parse(user_agent)
     hash_pass = hash_password(password)
-
     uuid_code = get_uuid()
     
     create = User(
@@ -65,23 +66,33 @@ def create_l_user(email_id:str,password:str,db:Session):
     db.add(create)
     db.flush()
     
-    expiry = c_plus_d(7)
+    expiry = c_plus_d(7) # current time + given days
+
+    # create auth  tokens
+    access = create_access_token(create.id,uuid_code)
+    refresh = create_refresh_token(create.id,uuid_code)
+    hash_r = sha_hash(refresh)
 
     add_s = Session(
 
         session_id = uuid_code,
         user_id = create.id,
 
-        r_token_hash = "empty",
+        r_token_hash = hash_r,
+
+        device_type = ua_parsed["device_type"],
+        device_name = ua_parsed["device"],
+        browser = ua_parsed["browser"],
+        os = ua_parsed["os"],
+
+        ip_address = ip,
+        user_agent = user_agent,
         
         expires_at = expiry
         
         )
     
     db.add(add_s)
-    db.flush()
-
-    add_s.r_token_hash = "trial"
 
 
     auth = UserAuth(
@@ -91,15 +102,15 @@ def create_l_user(email_id:str,password:str,db:Session):
     )
 
     try:
-        db.add(create)
         db.add(auth)
         db.commit()
-        db.refresh(create)
     except:
         db.rollback()
         raise
 
-    return create
+    return {"refresh":refresh,
+            "access":access,
+            "user":create}
 
 def login_l_user(email_id:str,password:str,db:Session):
     email = db.query(User).filter(User.email==email_id).first()
