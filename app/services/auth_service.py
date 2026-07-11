@@ -1,5 +1,5 @@
-from sqlalchemy.orm import UserSession
-from app.models.user_model import User,UserAuth,Session
+from sqlalchemy.orm import Session,joinedload
+from app.models.user_model import User,UserAuth,UserSession
 from fastapi import Request,HTTPException
 
 from app.utils.hashing import hash_password,verify_password
@@ -54,10 +54,7 @@ def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
 
     if email:
         raise HTTPException(status_code=400,detail="Email already registered")
-    
-    ua_parsed = user_agent_parse(user_agent)
-    hash_pass = hash_password(password)
-    uuid_code = get_uuid()
+
     
     create = User(
         email = email_id
@@ -68,10 +65,15 @@ def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
     
     expiry = c_plus_d(7) # current time + given days
 
+    ua_parsed = user_agent_parse(user_agent)
+    hash_pass = hash_password(password)
+    uuid_code = get_uuid()
+
     # create auth  tokens
     access = create_access_token(create.id,uuid_code)
     refresh = create_refresh_token(create.id,uuid_code)
     hash_r = sha_hash(refresh)
+
 
     add_s = Session(
 
@@ -112,18 +114,51 @@ def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
             "access":access,
             "user":create}
 
-def login_l_user(email_id:str,password:str,db:Session):
-    email = db.query(User).filter(User.email==email_id).first()
+def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Session):
+    email = db.query(User).filter(User.email==email_id).options(joinedload(User.auth)).first()
     if not email:
         raise HTTPException(status_code=400,detail="Wrong credentials")
-    
-    check = db.query(UserAuth).filter(UserAuth.user_id==email.id,UserAuth.provider=="local").first()
 
-    if not check:
-        raise HTTPException(status_code=400,detail="Add password to this email through create user")
-    
-    if not verify_password(password,check.hashed_password):
+    for auth in email.auth:
+        provider = None
+        if auth.provider == "local":
+            provider = "local"
+    if not provider:
         raise HTTPException(status_code=400,detail="Wrong credentials")
+    
+    if not verify_password(password,email.auth.hashed_password):
+        raise HTTPException(status_code=400,detail="Wrong credentials")
+    
+
+
+    uuid_code = get_uuid()
+    refresh_hash = sha_hash(create_refresh_token(email.id,uuid_code))
+    ua_parse = user_agent_parse(user_agent)
+    expire = c_plus_d(7)
+    
+    auth_s = UserSession(
+        session_id = uuid_code,
+        user_id = email.id,
+
+        r_token_hash = refresh_hash,
+
+        device_type = ua_parse["device_type"],
+        device_name = ua_parse["device"],
+        browser = ua_parse["browser"],
+        os = ua_parse["os"],
+
+        ip_address = ip,
+        user_agent = user_agent,
+        
+        expires_at = expire
+        
+    )
+    try:
+        db.add(auth_s)
+        db.commit()
+    except:
+        db.rollback()
+        raise
     
     return email
 
