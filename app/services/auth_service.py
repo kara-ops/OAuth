@@ -156,13 +156,18 @@ def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Session):
     try:
         db.add(auth_s)
         db.commit()
+        create_refresh = create_refresh_token(email.id,uuid_code)
+        create_access = create_access_token(email.id,uuid_code)
     except:
         db.rollback()
         raise
     
-    return email
+    return {"user":email,
+            "access":create_access,
+            "refresh":create_refresh}
 
 
+#change a password
 def reset_pass(user_id:int,new_password:str,current_password:str,db:Session):
     if current_password == new_password:
         raise HTTPException(status_code=400,detail="new password cannot be same as current one")
@@ -191,6 +196,7 @@ def reset_pass(user_id:int,new_password:str,current_password:str,db:Session):
 
     return {"successfully changed"}
 
+# password forgotten
 def forgot_password(email:str,db:Session):
     check = db.query(UserAuth).join(User).filter(User.email==email,UserAuth.provider=="local").first()
     if not check:
@@ -229,6 +235,8 @@ def new_password(code:str,password:str,db:Session,token:str):
     
     return {"Password changed successfully"}
 
+
+# add password to existing google email
 def add_password(user_id:int,password:str,db:Session):
     check = db.query(UserAuth).filter(UserAuth.user_id==user_id,UserAuth.provider=="local").first()
     if check is not None:

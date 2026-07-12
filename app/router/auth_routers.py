@@ -139,17 +139,16 @@ def logout(res:Response,authorization: str = Header()):
 @router.post("/login")
 def local_login(res:Response,user:UserLogin,db:Session=Depends(get_db)):
     login = auth_service.login_l_user(user.email,user.password,db)
-    access = security.create_access_token(login.id)
-    refresh = security.create_refresh_token(login.id)
+    
     res.set_cookie(
         key="refresh",
-        value=refresh,
+        value=login["refresh"],
         max_age=60*60*24*7,
         samesite="lax",
         httponly=True,
         secure=True
     )
-    return {"access_token":access,"token_type":"bearer"}
+    return {"access_token":login["access"],"token_type":"bearer"}
 
 @router.post("/create_user")
 def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db)):
@@ -170,16 +169,16 @@ def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=Depends
     #service call
     create = auth_service.create_l_user(ip,ua,user.email,user.password,db)
 
-    # res.set_cookie(
-    #     key="refresh",
-    #     value=refresh,
-    #     max_age=60*60*24*7,
-    #     samesite="lax",
-    #     httponly=True,
-    #     secure=True
+    res.set_cookie(
+        key="refresh",
+        value=create["refresh"],
+        max_age=60*60*24*7,
+        samesite="lax",
+        httponly=True,
+        secure=True
 
-    # )
-    # return {"access_token":access,"type":"bearer"}
+    )
+    return {"access_token":create["access"],"type":"bearer"}
     
 
 
