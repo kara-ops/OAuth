@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, func, ForeignKey, UniqueConstraint, UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship,joinedload
 from app.database.postgres import Base
 from datetime import datetime, timezone
 

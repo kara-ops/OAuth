@@ -29,6 +29,9 @@ class SetPassword(BaseModel):
     code:str
     new_password:str
 
+class AddPassword(BaseModel):
+    new_password:str
+
 
 
 

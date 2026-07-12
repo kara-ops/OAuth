@@ -9,7 +9,7 @@ from app.core import security
 from datetime import datetime, timezone
 from app.services import token_service 
 from app.models.user_model import User
-from app.schemas.Oauth_schema import RefreshRequest, TokenResponse, UserPublic, UserLogin, ResetPassword, ForgotPass, SetPassword
+from app.schemas.Oauth_schema import RefreshRequest, TokenResponse, UserPublic, UserLogin, ResetPassword, ForgotPass, SetPassword, AddPassword
 from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/auth", tags =["auth"])
@@ -139,7 +139,7 @@ def logout(res:Response,authorization: str = Header()):
 @router.post("/login")
 def local_login(res:Response,user:UserLogin,db:Session=Depends(get_db)):
     login = auth_service.login_l_user(user.email,user.password,db)
-    
+
     res.set_cookie(
         key="refresh",
         value=login["refresh"],
@@ -150,7 +150,7 @@ def local_login(res:Response,user:UserLogin,db:Session=Depends(get_db)):
     )
     return {"access_token":login["access"],"token_type":"bearer"}
 
-@router.post("/create_user")
+@router.post("/create-user")
 def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db)):
 
 
@@ -182,20 +182,26 @@ def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=Depends
     
 
 
-@router.patch("/reset_password")
+@router.patch("/reset-password")
 def reset_password(user:ResetPassword,db:Session=Depends(get_db),auth:User=Depends(get_current_user)):
     call_func = auth_service.reset_pass(auth.id,user.new_password,user.current_password,db)
     return call_func
 
 
-@router.post("/forgot_password")
+@router.post("/forgot-password")
 def forgot_pass(user:ForgotPass,db:Session=Depends(get_db)):
     return auth_service.forgot_password(user.email,db)
 
-@router.patch("/set_password")
+@router.patch("/set-password")
 def set_password(token:str,user:SetPassword,db:Session=Depends(get_db)):
     call_func = auth_service.new_password(user.code,user.new_password,db,token)
     return call_func
+
+@router.post("/add-password")
+def add_pass(req:AddPassword,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
+    check = auth_service.add_password(user["sub"],req.new_password,db)
+    return check
+
 
 
     
