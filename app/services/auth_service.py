@@ -75,7 +75,7 @@ def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
     hash_r = sha_hash(refresh)
 
 
-    add_s = Session(
+    add_s = UserSession(
 
         session_id = uuid_code,
         user_id = create.id,

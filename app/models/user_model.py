@@ -15,7 +15,7 @@ class User(Base):
     avatar_url = Column(String,nullable=True)
 
     auth = relationship("UserAuth",back_populates="user",cascade="all, delete")
-    session = relationship("Session",back_populates="user",cascade="all, delete")
+    session = relationship("UserSession",back_populates="user",cascade="all, delete")
 
 class UserAuth(Base):
     __tablename__ = "user_auth"

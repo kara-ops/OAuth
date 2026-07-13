@@ -2,6 +2,11 @@ from jose import jwt, JWTError, ExpiredSignatureError
 from fastapi import HTTPException
 from app.core.config import settings
 from datetime import timedelta, datetime, timezone
+# Token
+from sqlalchemy.orm import Session
+from app.models.user_model import UserSession
+from app.utils.code_gen import sha_hash
+from app.utils.time_calc import current_time
 
 from uuid import uuid4
 
@@ -15,7 +20,7 @@ def create_access_token(user_id:int,sid:str)->str:
         "exp":expire,
         "iat":current,
         "jti" : jti,
-        "sid":sid,
+        "sid":str(sid),
         "type" : "access",
         "sub" : str(user_id)
 
@@ -30,7 +35,7 @@ def create_refresh_token(user_id:int,sid:str)->str:
     payload = {
         "exp": expire,
         "iat":current,
-        "sid":sid,
+        "sid":str(sid),
         "type": "refresh",
         "sub": str(user_id),
         "jti": jti
@@ -38,18 +43,29 @@ def create_refresh_token(user_id:int,sid:str)->str:
     return jwt.encode(payload,settings.SECRET_KEY,algorithm=settings.ALGORITHM)
 
 
-def decode_token(token:str)->dict:
+def decode_token(token:str,db:Session)->dict:
     try:
         payload = jwt.decode(token,settings.SECRET_KEY,algorithms=settings.ALGORITHM)
-        return payload
     except ExpiredSignatureError:
         raise HTTPException(
-            status_code = 401, detail = "Expired Token"
+            status_code = 401, detail = "Invalid or Expired Token"
         )
     except JWTError:
         raise HTTPException(
-            status_code = 401, detail = "Invalid token"
+            status_code = 401, detail = "Invalid or Expired Token"
         )
+    
+    check = db.query(UserSession).filter(UserSession.session_id==payload["sid"]).first()
+    if check is None:
+        raise HTTPException(status_code=404,detail="User not found")
+    
+    curr_time = current_time()
+    if check.revoked_at is not None or check.expires_at < curr_time or sha_hash(token) != check.r_token_hash:
+        raise HTTPException(status_code=400,detail="Invalid or Expired Token")
+    return payload
+    
+
+
 
 
     
