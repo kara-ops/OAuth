@@ -5,12 +5,12 @@ from fastapi import Request,HTTPException
 from app.utils.hashing import hash_password,verify_password
 from app.utils.code_gen import gen_code,gen_url_token,get_uuid,user_agent_parse,sha_hash
 from app.utils.email_service import forgot_pass_mail
-from app.utils.time_calc import c_plus_d
+from app.utils.time_calc import c_plus_d,current_time
 
 
 from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key
 
-from app.core.security import create_access_token,create_refresh_token
+from app.core.security import create_access_token,create_refresh_token,decode_token
 
 
 def get_or_create_user(db:Session, google_user:dict)->User:
@@ -121,12 +121,13 @@ def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Session):
 
     for auth in email.auth:
         provider = None
+        hashed_password = auth.hashed_password
         if auth.provider == "local":
             provider = "local"
     if not provider:
         raise HTTPException(status_code=400,detail="Wrong credentials")
     
-    if not verify_password(password,email.auth.hashed_password):
+    if not verify_password(password,hashed_password):
         raise HTTPException(status_code=400,detail="Wrong credentials")
     
 
@@ -256,6 +257,42 @@ def add_password(user_id:int,password:str,db:Session):
         db.rollback()
         raise
     return {"Password added successfully"}
+
+def get_session(user_id:int,db:Session):
+    get = db.query(UserSession.last_seen,UserSession.device_type,UserSession.device_name).filter(UserSession.user_id==user_id).all()
+    if get is None:
+        raise HTTPException(status_code=400,detail="No session's found")
+
+    session = [dict(row._mapping) for row in get]
+    return session
+
+def refresh_token(token:str,db:Session):
+    token = decode_token(token,db)
+
+    get = db.query(UserSession).filter(UserSession.session_id==token["sid"])
+    if get is None:
+        raise HTTPException(status_code=400,detail="Session not found")
+    
+    new_r = create_refresh_token(token["sub"],token["sid"])
+    new_r_hash = sha_hash(new_r)
+    new_a = create_access_token(token["sub"],token["sid"])
+
+    get.r_token_hash = new_r_hash
+    get.last_seen = current_time()
+    get.expires_at = c_plus_d(7)
+    get.created_at = current_time()
+    try:
+        db.commit()
+    except:
+        db.rollback()
+        raise
+    return {"refresh":new_r,
+            "access":new_a,
+            "sub":token["sub"]}
+    
+    
+
+    
 
 
     

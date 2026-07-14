@@ -69,33 +69,18 @@ async def google_callback(res:Response,code:str, db:Session = Depends(get_db)):
 
 
 @router.post("/refresh", response_model = TokenResponse )
-def refresh_logic(req:Request,res:Response):
+def refresh_logic(req:Request,res:Response,db:Session=Depends(get_db)):
     refresh_token = req.cookies.get("refresh")
-    decode_token = security.decode_token(refresh_token)
 
-    if decode_token["type"] != "refresh":
-        raise HTTPException(
-            status_code = 401,
-            detail = "Invalid token"
-        )
+    call = auth_service.refresh_token(refresh_token,db)
     
-    verify = token_service.verify_refresh_token(decode_token["sub"],refresh_token)
-    if not verify:
-        raise HTTPException(
-            status_code = 401, 
-            detail = "Invalid token"
-        )
-    
-    token_service.delete_refresh_token(decode_token["sub"])
+    token_service.delete_refresh_token(call["sub"])
 
-    create_refresh = security.create_refresh_token(int(decode_token["sub"]))
-    create_access = security.create_access_token(int(decode_token["sub"]))
-
-    token_service.store_refresh_token(decode_token["sub"], create_refresh)
+    token_service.store_refresh_token(call["sub"],call["refresh"])
     res.set_cookie(
         key="refresh",
         max_age=60*60*24*7,
-        value=create_refresh,
+        value=call["refresh"],
         secure=True,
         samesite="lax",
         httponly=True,
@@ -103,7 +88,7 @@ def refresh_logic(req:Request,res:Response):
 
 
 
-    return TokenResponse(access_token=create_access,token_type="bearer")
+    return TokenResponse(access_token=call["access"],token_type="bearer")
 
 @router.post("/logout")
 def logout(res:Response,authorization: str = Header()):
@@ -137,8 +122,19 @@ def logout(res:Response,authorization: str = Header()):
     }
 
 @router.post("/login")
-def local_login(res:Response,user:UserLogin,db:Session=Depends(get_db)):
-    login = auth_service.login_l_user(user.email,user.password,db)
+def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db)):
+    ip =""
+    x_forwarded_for = req.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        ip = x_forwarded_for
+    else:
+        ip = req.client.host
+    
+    #user-agent
+
+    ua = req.headers.get("User-Agent")
+
+    login = auth_service.login_l_user(ip,ua,user.email,user.password,db)
 
     res.set_cookie(
         key="refresh",
@@ -201,6 +197,12 @@ def set_password(token:str,user:SetPassword,db:Session=Depends(get_db)):
 def add_pass(req:AddPassword,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     check = auth_service.add_password(user["sub"],req.new_password,db)
     return check
+
+@router.get("get-session")
+def get_sessions(db:Session=Depends(get_db),user:User=Depends(get_current_user)):
+    call = auth_service.get_session(user["sub"],db)
+    return call
+
 
 
 
