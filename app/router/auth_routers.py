@@ -68,6 +68,7 @@ async def google_callback(res:Response,code:str, db:Session = Depends(get_db)):
     return TokenResponse(access_token=create_access,token_type="bearer")
 
 
+#rotate refresh token
 @router.post("/refresh", response_model = TokenResponse )
 def refresh_logic(req:Request,res:Response,db:Session=Depends(get_db)):
     refresh_token = req.cookies.get("refresh")
