@@ -51,7 +51,7 @@ class UserSession(Base):
     user_agent = Column(String)
 
     created_at = Column(DateTime,server_default=func.now(),nullable=False)
-    expires_at = Column(DateTime,nullable=False,index=True)
-    last_seen = Column(DateTime,server_default=func.now(),nullable=False)
+    expires_at = Column(DateTime(timezone=True),nullable=False,index=True)
+    last_seen = Column(DateTime(timezone=True),server_default=func.now(),nullable=False)
 
     user = relationship("User",back_populates="session")

@@ -13,12 +13,47 @@ from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_f
 from app.core.security import create_access_token,create_refresh_token,decode_token
 
 
-def get_or_create_user(db:Session, google_user:dict)->User:
-    email = db.query(User).filter(User.email==google_user["email"]).first()
+def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User:
+    email = db.query(User).filter(User.email==google_user["email"]).options(joinedload(UserAuth)).first()
     if email:
-        check = db.query(UserAuth).filter(UserAuth.user_id==email.id).first()
-        if check:
-            return email
+
+        provider = None
+        for auth in email.auth:
+            if auth.provider == "google":
+                provider = "google"
+
+        if provider == "google":
+            uuid_code = get_uuid()
+            expire = c_plus_d(7)
+            create_r = create_refresh_token(email.id,uuid_code)
+            hash_r = sha_hash(create_r)
+            ua_parse = user_agent_parse(user_agent)
+            add_s = UserSession(
+                session_id = uuid_code,
+                user_id = email.id,
+
+                r_token_hash = hash_r,
+
+                device_type = ua_parse["device_type"],
+                device_name = ua_parse["device_name"],
+                browser = ua_parse["browser"],
+                os = ua_parse["os"],
+
+                ip_address = ip,
+                user_agent = user_agent,
+
+                expires_at = expire
+            )
+            try:
+               db.add(add_s)
+               db.commit()
+               db.refresh(add_s)
+            except:
+                db.rollback()
+                raise
+            return {"user":email,
+                    "refresh":create_refresh_token(email.id),
+                    "access":create_access_token(email.id)}
         else:
             create_user = UserAuth(
                 user_id = email.id,
@@ -27,10 +62,40 @@ def get_or_create_user(db:Session, google_user:dict)->User:
             )
             email.avatar_url = google_user["picture"]
             email.name = google_user["name"]
-            db.add(create_user)
-            db.commit()
-            db.refresh(create_user)
-            return email
+            
+            uuid_code = get_uuid()
+            expire = c_plus_d(7)
+            create_r = create_refresh_token(email.id,uuid_code)
+            hash_r = sha_hash(create_r)
+            ua_parse = user_agent_parse(user_agent)
+
+            add_s = UserSession(
+                session_id = uuid_code,
+                user_id = email.id,
+
+                r_token_hash = hash_r,
+
+                device_type = ua_parse["device_type"],
+                device_name = ua_parse["device_name"],
+                browser = ua_parse["browser"],
+                os = ua_parse["os"],
+
+                ip_address = ip,
+                user_agent = user_agent,
+
+                expires_at = expire
+            )
+            try:
+               db.add(create_user)
+               db.add(add_s)
+               db.commit()
+               db.refresh(create_user)
+            except:
+                db.rollback()
+                raise
+            return {"user":email,
+                    "refresh":create_r,
+                    "access":create_access_token(email.id,uuid_code)}
     else:
         user = User(
             email = google_user["email"],
@@ -44,6 +109,34 @@ def get_or_create_user(db:Session, google_user:dict)->User:
             provider_id = google_user["id"],
             user_id = user.id
         )
+        uuid_code = get_uuid()
+        expire = c_plus_d(7)
+        create_r = create_refresh_token(email.id,uuid_code)
+        hash_r = sha_hash(create_r)
+        ua_parse = user_agent_parse(user_agent)
+        add_s = UserSession(
+                session_id = uuid_code,
+                user_id = email.id,
+
+                r_token_hash = hash_r,
+
+                device_type = ua_parse["device_type"],
+                device_name = ua_parse["device_name"],
+                browser = ua_parse["browser"],
+                os = ua_parse["os"],
+
+                ip_address = ip,
+                user_agent = user_agent,
+
+                expires_at = expire
+            )
+        try:
+            db.add(add_s)
+            db.commit()
+            db.refresh(add_s)
+        except:
+            db.rollback()
+            raise
         db.add(user_auth)
         db.commit()
         db.refresh(user_auth)
@@ -133,7 +226,8 @@ def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Session):
 
 
     uuid_code = get_uuid()
-    refresh_hash = sha_hash(create_refresh_token(email.id,uuid_code))
+    create_refresh = create_refresh_token(email.id,uuid_code)
+    refresh_hash = sha_hash(create_refresh)
     ua_parse = user_agent_parse(user_agent)
     expire = c_plus_d(7)
     
@@ -157,7 +251,6 @@ def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Session):
     try:
         db.add(auth_s)
         db.commit()
-        create_refresh = create_refresh_token(email.id,uuid_code)
         create_access = create_access_token(email.id,uuid_code)
     except:
         db.rollback()
@@ -166,6 +259,30 @@ def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Session):
     return {"user":email,
             "access":create_access,
             "refresh":create_refresh}
+
+def login_g_user(req:Request,ip:str,user_agent:str,google_user:dict,db:Session):
+    check = db.query(User).filter(User.email==google_user["email"]).option(joinedload(UserAuth)).first()
+    if check:
+        provider = None
+        for auth in check.auth:
+            if auth.provider == "google":
+                provider = "google"
+        if provider == "google":
+            return {"user":check,
+                    "refresh":"token",
+                    "access":"token"}
+        else:
+            g_user = UserAuth(
+                provider = "google",
+                provider_id = google_user["id"],
+                user_id = check.id     
+            )
+            check.avatar_url = google_user["picture"]
+            
+
+    ua_parsed = user_agent_parse(user_agent)
+    uuid_code = get_uuid()
+    create_refresh = create_refresh_token()
 
 
 #change a password

@@ -196,12 +196,12 @@ def set_password(token:str,user:SetPassword,db:Session=Depends(get_db)):
 
 @router.post("/add-password")
 def add_pass(req:AddPassword,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
-    check = auth_service.add_password(user["sub"],req.new_password,db)
+    check = auth_service.add_password(user.id,req.new_password,db)
     return check
 
-@router.get("get-session")
+@router.get("/get-session")
 def get_sessions(db:Session=Depends(get_db),user:User=Depends(get_current_user)):
-    call = auth_service.get_session(user["sub"],db)
+    call = auth_service.get_session(user.id,db)
     return call
 
 

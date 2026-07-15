@@ -37,4 +37,6 @@ def user_agent_parse(user_agent:str):
 def sha_hash(r_token:str):
     return hashlib.sha256(r_token.encode()).hexdigest()
 
+print(sha_hash("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQ2MzUyMDEsImlhdCI6MTc4NDExNjgwMSwic2lkIjoiZGFjYTIxMWYtZmQ5MC00MzRmLTgzMTUtMTc5YzdhMDQyMTAwIiwidHlwZSI6InJlZnJlc2giLCJzdWIiOiIxNSIsImp0aSI6Ijc0MDhmMDU2LWQyMjEtNDU5OC04YjM1LTgzMTQ2MDgxMmRjNCJ9.gT1h_6kdfd35bxXw-QmKrfqCROT_Pjd62xaqslx52UU"))
+
 

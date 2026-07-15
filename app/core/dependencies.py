@@ -20,7 +20,7 @@ def get_current_user(authorization: str = Header(), db:Session = Depends(get_db)
     
     access = parts[1]
 
-    decode = decode_token(access)
+    decode = decode_token(access,db)
     if decode["type"] != "access":
         raise HTTPException(
             status_code = 401,

@@ -55,7 +55,7 @@ def decode_token(token:str,db:Session)->dict:
             status_code = 401, detail = "Invalid or Expired Token"
         )
     
-    if payload["type"] is not "refresh":
+    if payload["type"] != "refresh":
         raise HTTPException(status_code=400,detail="Invalid token")
     
     check = db.query(UserSession).filter(UserSession.session_id==payload["sid"]).first()
@@ -63,8 +63,12 @@ def decode_token(token:str,db:Session)->dict:
         raise HTTPException(status_code=404,detail="Session not found")
     
     curr_time = current_time()
-    if check.revoked_at is not None or check.expires_at < curr_time or sha_hash(token) != check.r_token_hash:
+    if check.revoked_at != None:
         raise HTTPException(status_code=400,detail="Invalid or Expired Token")
+    elif check.expires_at < curr_time:
+        raise HTTPException(status_code=400,detail="Invalid or Expired Tokens")
+    elif sha_hash(token) != check.r_token_hash:
+        raise HTTPException(status_code=400,detail="Invalid or Expired Tokena")
     return payload
     
 
