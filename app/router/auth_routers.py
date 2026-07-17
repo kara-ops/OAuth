@@ -39,23 +39,34 @@ def google_login(request : Request)->str:
 
 @router.get("/google/callback")
 #oauth_client = oc, auth_service = a, security = s, oauth_schema = os
-async def google_callback(res:Response,code:str, db:Session = Depends(get_db)):
+async def google_callback(request:Request,res:Response,code:str, db:Session = Depends(get_db)):
     try:
         access_token = await oauth_client.exchange_code_for_token(code)
         print("access_token : ", access_token)
     except Exception as e:
         raise
 
+
     
     get_user_data = await oauth_client.get_google_user(access_token)
     user_info = get_user_data
 
-    get_or_create = auth_service.get_or_create_user(db=db,google_user=user_info)
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(",")[0]
+    else:
+        ip = request.client.host
 
-    create_access =security.create_access_token(get_or_create.id)
-    create_refresh = security.create_refresh_token(get_or_create.id)
+    ua = request.headers.get("User-Agent")
 
-    token_service.store_refresh_token(get_or_create.id, create_refresh)
+
+
+    get_or_create = auth_service.get_or_create_user(db,user_info,ip,ua)
+
+    create_access =  get_or_create["access"]
+    create_refresh = get_or_create["refresh"]
+
+    token_service.store_refresh_token(get_or_create["user"].id, create_refresh)
     res.set_cookie(
         key="refresh",
         value=create_refresh,

@@ -14,7 +14,7 @@ from app.core.security import create_access_token,create_refresh_token,decode_to
 
 
 def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User:
-    email = db.query(User).filter(User.email==google_user["email"]).options(joinedload(UserAuth)).first()
+    email = db.query(User).filter(User.email==google_user["email"]).options(joinedload(User.auth)).first()
     if email:
 
         provider = None
@@ -23,11 +23,13 @@ def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User
                 provider = "google"
 
         if provider == "google":
+
             uuid_code = get_uuid()
             expire = c_plus_d(7)
             create_r = create_refresh_token(email.id,uuid_code)
             hash_r = sha_hash(create_r)
             ua_parse = user_agent_parse(user_agent)
+
             add_s = UserSession(
                 session_id = uuid_code,
                 user_id = email.id,
@@ -35,7 +37,7 @@ def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User
                 r_token_hash = hash_r,
 
                 device_type = ua_parse["device_type"],
-                device_name = ua_parse["device_name"],
+                device_name = ua_parse["device"],
                 browser = ua_parse["browser"],
                 os = ua_parse["os"],
 
@@ -52,8 +54,9 @@ def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User
                 db.rollback()
                 raise
             return {"user":email,
-                    "refresh":create_refresh_token(email.id),
-                    "access":create_access_token(email.id)}
+                    "refresh":create_r,
+                    "access":create_access_token(email.id,uuid_code)
+                    }
         else:
             create_user = UserAuth(
                 user_id = email.id,
@@ -76,7 +79,7 @@ def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User
                 r_token_hash = hash_r,
 
                 device_type = ua_parse["device_type"],
-                device_name = ua_parse["device_name"],
+                device_name = ua_parse["device"],
                 browser = ua_parse["browser"],
                 os = ua_parse["os"],
 
@@ -95,7 +98,8 @@ def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User
                 raise
             return {"user":email,
                     "refresh":create_r,
-                    "access":create_access_token(email.id,uuid_code)}
+                    "access":create_access_token(email.id,uuid_code)
+                    }
     else:
         user = User(
             email = google_user["email"],
@@ -104,16 +108,19 @@ def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User
         )
         db.add(user)
         db.flush()
+
         user_auth = UserAuth(
             provider = "google",
             provider_id = google_user["id"],
             user_id = user.id
         )
+
         uuid_code = get_uuid()
         expire = c_plus_d(7)
         create_r = create_refresh_token(email.id,uuid_code)
         hash_r = sha_hash(create_r)
         ua_parse = user_agent_parse(user_agent)
+
         add_s = UserSession(
                 session_id = uuid_code,
                 user_id = email.id,
@@ -121,7 +128,7 @@ def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User
                 r_token_hash = hash_r,
 
                 device_type = ua_parse["device_type"],
-                device_name = ua_parse["device_name"],
+                device_name = ua_parse["device"],
                 browser = ua_parse["browser"],
                 os = ua_parse["os"],
 
@@ -132,15 +139,17 @@ def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User
             )
         try:
             db.add(add_s)
+            db.add(user)
+            db.add(user_auth)
             db.commit()
-            db.refresh(add_s)
+            db.refresh(user)
         except:
             db.rollback()
             raise
-        db.add(user_auth)
-        db.commit()
-        db.refresh(user_auth)
-        return user
+        return {"user":email,
+                "refresh":create_r,
+                "access":create_access_token(email.id,uuid_code)
+                }
     
 def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
     email = db.query(User).filter(User.email==email_id).first()  #db search for user exist or not
