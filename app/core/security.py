@@ -43,7 +43,7 @@ def create_refresh_token(user_id:int,sid:str)->str:
     return jwt.encode(payload,settings.SECRET_KEY,algorithm=settings.ALGORITHM)
 
 
-def decode_token(token:str,db:Session)->dict:
+def decode_token_r(token:str,db:Session)->dict:
     try:
         payload = jwt.decode(token,settings.SECRET_KEY,algorithms=settings.ALGORITHM)
     except ExpiredSignatureError:
@@ -71,6 +71,19 @@ def decode_token(token:str,db:Session)->dict:
         raise HTTPException(status_code=400,detail="Invalid or Expired Tokena")
     return payload
     
+
+#decode access token only
+def decode_token(token:str)->dict:
+    try:
+        payload = jwt.decode(token,settings.SECRET_KEY,algorithms=[settings.ALGORITHM])
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401,detail="Invalid or Expired token")
+    except JWTError:
+        raise HTTPException(status_code=401,detail="Invalid or Expired token")
+    
+    if payload["type"] != "access":
+        raise HTTPException(status_code=400,detail="Invalid token")
+    return payload
 
 
 

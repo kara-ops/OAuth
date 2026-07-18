@@ -67,7 +67,9 @@ async def google_callback(request:Request,res:Response,code:str, db:Session = De
     create_refresh = get_or_create["refresh"]
 
     token_service.store_refresh_token(get_or_create["user"].id, create_refresh)
-    res.set_cookie(
+    
+    redirect_res = RedirectResponse(url=f"http://localhost:5173/oauth/callback?access_token={create_access}")
+    redirect_res.set_cookie(
         key="refresh",
         value=create_refresh,
         max_age=60*60*24*7,
@@ -76,7 +78,7 @@ async def google_callback(request:Request,res:Response,code:str, db:Session = De
         secure=True
     )
 
-    return TokenResponse(access_token=create_access,token_type="bearer")
+    return redirect_res
 
 
 #rotate refresh token

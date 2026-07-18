@@ -10,7 +10,7 @@ from app.utils.time_calc import c_plus_d,current_time
 
 from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key
 
-from app.core.security import create_access_token,create_refresh_token,decode_token
+from app.core.security import create_access_token,create_refresh_token,decode_token,decode_token_r
 
 
 def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User:
@@ -123,7 +123,7 @@ def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User
 
         add_s = UserSession(
                 session_id = uuid_code,
-                user_id = email.id,
+                user_id = user.id,
 
                 r_token_hash = hash_r,
 
@@ -393,9 +393,9 @@ def get_session(user_id:int,db:Session):
     return session
 
 def refresh_token(token:str,db:Session):
-    token = decode_token(token,db)
+    token = decode_token_r(token,db)
 
-    get = db.query(UserSession).filter(UserSession.session_id==token["sid"])
+    get = db.query(UserSession).filter(UserSession.session_id==token["sid"]).first()
     if get is None:
         raise HTTPException(status_code=400,detail="Session not found")
     

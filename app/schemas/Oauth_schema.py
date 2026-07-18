@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 class TokenResponse(BaseModel):
@@ -14,7 +15,9 @@ class UserLogin(BaseModel):
 class UserPublic(BaseModel):
     id : int
     email : str
-    name : str
+    name : Optional[str] = None
+    is_active: Optional[bool] = None
+    avatar_url: Optional[str] = None
     class Config:
         from_attributes = True
 
