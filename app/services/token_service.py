@@ -56,4 +56,27 @@ def del_forgot_pass_key(token:str,code:str):
     key = f"reset:{token}:{code}"
     redis.delete(key)
 
+def concurrent_first_request(sid):
+    redis = get_redis()
+    key = f"concurrent_refresh:{sid}"
+    value = {"status":"refreshing"}
+    redis.hset("concurrent_r",key,mapping=value)
+    redis.expire(key,10,nx=True)
+
+def concurrent_r_token(sid,a_token:str,r_token:str):
+    redis = get_redis()
+    key = f"concurrent_refresh:{sid}"
+    value = {"status":"done",
+             "access":a_token,
+             "refresh":r_token}
+    redis.hset("concurrent",key,mapping=value)
+    redis.expire(key,10)
+
+def get_concurrent_r_token(sid):
+    redis = get_redis()
+    key = f"concurrent_refresh:{sid}"
+    return redis.exists(key)
+
+
+
 

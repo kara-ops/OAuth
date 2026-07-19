@@ -86,6 +86,8 @@ async def google_callback(request:Request,res:Response,code:str, db:Session = De
 def refresh_logic(req:Request,res:Response,db:Session=Depends(get_db)):
     refresh_token = req.cookies.get("refresh")
 
+    if token_service.get_concurrent_r_token()
+
     call = auth_service.refresh_token(refresh_token,db)
     
     token_service.delete_refresh_token(call["sub"])

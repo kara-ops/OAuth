@@ -8,7 +8,7 @@ from app.utils.email_service import forgot_pass_mail
 from app.utils.time_calc import c_plus_d,current_time
 
 
-from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key
+from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key,concurrent_r_token,concurrent_first_request,get_concurrent_r_token
 
 from app.core.security import create_access_token,create_refresh_token,decode_token,decode_token_r
 
@@ -392,12 +392,17 @@ def get_session(user_id:int,db:Session):
     session = [dict(row._mapping) for row in get]
     return session
 
-def refresh_token(token:str,db:Session):
+async def refresh_token(token:str,db:Session):
     token = decode_token_r(token,db)
 
     get = db.query(UserSession).filter(UserSession.session_id==token["sid"]).first()
     if get is None:
         raise HTTPException(status_code=400,detail="Session not found")
+    
+    if get_concurrent_r_token(token["sid"]) and get_concurrent_r_token["status"] == "refreshing":
+
+    
+
     
     new_r = create_refresh_token(token["sub"],token["sid"])
     new_r_hash = sha_hash(new_r)
