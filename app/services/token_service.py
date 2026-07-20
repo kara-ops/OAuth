@@ -1,4 +1,5 @@
 from app.database.redis import get_redis
+import json
 
 def store_refresh_token(user_id:int, refresh_token:str)->None:
     redis = get_redis()
@@ -60,8 +61,7 @@ def concurrent_first_request(sid):
     redis = get_redis()
     key = f"concurrent_refresh:{sid}"
     value = {"status":"refreshing"}
-    redis.hset("concurrent_r",key,mapping=value)
-    redis.expire(key,10,nx=True)
+    return redis.set(key,json.dumps(value),10,nx=True)
 
 def concurrent_r_token(sid,a_token:str,r_token:str):
     redis = get_redis()
@@ -69,13 +69,17 @@ def concurrent_r_token(sid,a_token:str,r_token:str):
     value = {"status":"done",
              "access":a_token,
              "refresh":r_token}
-    redis.hset("concurrent",key,mapping=value)
-    redis.expire(key,10)
+    redis.set(key,json.dumps(value),10)
+
 
 def get_concurrent_r_token(sid):
     redis = get_redis()
     key = f"concurrent_refresh:{sid}"
-    return redis.exists(key)
+    data = redis.get(key)
+    if data:
+        return json.loads(data)
+    else:
+        return None
 
 
 

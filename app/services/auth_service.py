@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session,joinedload
 from app.models.user_model import User,UserAuth,UserSession
 from fastapi import Request,HTTPException
+import asyncio
 
 from app.utils.hashing import hash_password,verify_password
 from app.utils.code_gen import gen_code,gen_url_token,get_uuid,user_agent_parse,sha_hash
@@ -399,7 +400,26 @@ async def refresh_token(token:str,db:Session):
     if get is None:
         raise HTTPException(status_code=400,detail="Session not found")
     
-    if get_concurrent_r_token(token["sid"]) and get_concurrent_r_token["status"] == "refreshing":
+    redis_set = concurrent_first_request(token["sid"])
+    redis_token = get_concurrent_r_token(token["sid"])
+    if redis_set != None or redis_set != False:
+        pass    
+    elif redis_token["status"] == "refreshing":
+        for i in range(200):
+            call_redis = get_concurrent_r_token(token["sid"])
+            if call_redis and call_redis["status"] == "done":
+                return {"access":call_redis["access"],
+                        "refresh":call_redis["refresh"],
+                        "sub":token["sub"]
+                        }
+            await asyncio.sleep(0.05)
+        raise HTTPException(status_code=500,detail="refresh_timedout")
+    elif redis_token["status"] == "done":
+        return {"access":redis_token["access"],
+                "refresh":redis_token["refresh"],
+                "sub":token["sub"]
+                }
+
 
     
 
@@ -417,6 +437,7 @@ async def refresh_token(token:str,db:Session):
     except:
         db.rollback()
         raise
+    concurrent_r_token(token["sid"],new_a,new_r)
     return {"refresh":new_r,
             "access":new_a,
             "sub":token["sub"]}
