@@ -368,7 +368,7 @@ def new_password(code:str,password:str,db:Session,token:str):
 def add_password(user_id:int,password:str,db:Session):
     check = db.query(UserAuth).filter(UserAuth.user_id==user_id,UserAuth.provider=="local").first()
     if check is not None:
-        raise HTTPException(status_code=400,detail="This email has a password, to change password use forgot-password or resent password")
+        raise HTTPException(status_code=400,detail="This email has a password, to change password use forgot-password or reset password")
     
     hash_pass = hash_password(password)
 
@@ -402,9 +402,9 @@ async def refresh_token(token:str,db:Session):
     
     redis_set = concurrent_first_request(token["sid"])
     redis_token = get_concurrent_r_token(token["sid"])
-    if redis_set != None or redis_set != False:
+    if redis_set == True:
         pass    
-    elif redis_token["status"] == "refreshing":
+    else:
         for i in range(200):
             call_redis = get_concurrent_r_token(token["sid"])
             if call_redis and call_redis["status"] == "done":
@@ -414,11 +414,6 @@ async def refresh_token(token:str,db:Session):
                         }
             await asyncio.sleep(0.05)
         raise HTTPException(status_code=500,detail="refresh_timedout")
-    elif redis_token["status"] == "done":
-        return {"access":redis_token["access"],
-                "refresh":redis_token["refresh"],
-                "sub":token["sub"]
-                }
 
 
     

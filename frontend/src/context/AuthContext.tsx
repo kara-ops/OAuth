@@ -25,6 +25,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUser = async () => {
     try {
+      const token = localStorage.getItem('access_token');
+      
+      // If we don't have a token, proactively try to get one using the refresh cookie
+      if (!token) {
+        try {
+          const refreshRes = await apiClient.post('/auth/refresh');
+          if (refreshRes.data && refreshRes.data.access_token) {
+            localStorage.setItem('access_token', refreshRes.data.access_token);
+          } else {
+            throw new Error('No token returned');
+          }
+        } catch (refreshErr) {
+          // No valid refresh cookie, user is truly logged out
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Now fetch user info (interceptor will handle it if token is expired)
       const response = await apiClient.get('/users/me');
       setUser(response.data);
     } catch (error) {

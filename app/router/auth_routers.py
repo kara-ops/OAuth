@@ -83,18 +83,19 @@ async def google_callback(request:Request,res:Response,code:str, db:Session = De
 
 #rotate refresh token
 @router.post("/refresh", response_model = TokenResponse )
-def refresh_logic(req:Request,res:Response,db:Session=Depends(get_db)):
+async def refresh_logic(req:Request,res:Response,db:Session=Depends(get_db)):
     refresh_token = req.cookies.get("refresh")
 
-    call = auth_service.refresh_token(refresh_token,db)
+    call = await auth_service.refresh_token(refresh_token,db)
+    token = call["refresh"]
     
-    token_service.delete_refresh_token(call["sub"])
+    token_service.delete_refresh_token(token)
 
-    token_service.store_refresh_token(call["sub"],call["refresh"])
+    token_service.store_refresh_token(call["sub"],token)
     res.set_cookie(
         key="refresh",
         max_age=60*60*24*7,
-        value=call["refresh"],
+        value=token,
         secure=True,
         samesite="lax",
         httponly=True,
