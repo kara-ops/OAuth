@@ -66,7 +66,7 @@ async def google_callback(request:Request,res:Response,code:str, db:Session = De
     create_access =  get_or_create["access"]
     create_refresh = get_or_create["refresh"]
 
-    await token_service.store_refresh_token(get_or_create["user"].id, create_refresh)
+    token_service.store_refresh_token(get_or_create["user"].id, create_refresh)
     
     redirect_res = RedirectResponse(url=f"http://localhost:5173/oauth/callback?access_token={create_access}")
     redirect_res.set_cookie(

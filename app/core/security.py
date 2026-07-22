@@ -3,7 +3,8 @@ from fastapi import HTTPException
 from app.core.config import settings
 from datetime import timedelta, datetime, timezone
 # Token
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession as Session
 from app.models.user_model import UserSession
 from app.utils.code_gen import sha_hash
 from app.utils.time_calc import current_time
@@ -43,7 +44,7 @@ def create_refresh_token(user_id:int,sid:str)->str:
     return jwt.encode(payload,settings.SECRET_KEY,algorithm=settings.ALGORITHM)
 
 
-def decode_token_r(token:str,db:Session)->dict:
+async def decode_token_r(token:str,db:Session)->dict:
     try:
         payload = jwt.decode(token,settings.SECRET_KEY,algorithms=settings.ALGORITHM)
     except ExpiredSignatureError:
@@ -58,7 +59,8 @@ def decode_token_r(token:str,db:Session)->dict:
     if payload["type"] != "refresh":
         raise HTTPException(status_code=400,detail="Invalid token")
     
-    check = db.query(UserSession).filter(UserSession.session_id==payload["sid"]).first()
+    query = await db.execute(select(UserSession).where(UserSession.session_id==payload["sid"]))
+    check = query.scalar_one_or_none()
     if check is None:
         raise HTTPException(status_code=404,detail="Session not found")
     

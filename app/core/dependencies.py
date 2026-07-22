@@ -1,11 +1,19 @@
 from fastapi import Depends,HTTPException, Header
-from sqlalchemy.orm import Session
+
+from sqlalchemy.ext.asyncio import AsyncSession as Session
+from sqlalchemy import select
+
 from app.database.postgres import get_db
+
 from app.core.security import decode_token
+
 from app.services.token_service import is_blacklisted
+
 from app.models.user_model import User
 
-def get_current_user(authorization: str = Header(), db:Session = Depends(get_db)):
+from app.schemas.Oauth_schema import UserBaseModel
+
+async def get_current_user(authorization: str = Header(), db:Session = Depends(get_db)):
     if not authorization:
         raise HTTPException(
             status_code = 401, detail = "Header missing"
@@ -33,10 +41,11 @@ def get_current_user(authorization: str = Header(), db:Session = Depends(get_db)
             detail = "Token revoked"
         )
     
-    querry = db.query(User).filter(User.id==int(decode["sub"])).first()
+    check = await db.execute(select(User).where(User.id==int(decode["sub"])))
+    querry = check.scalar_one_or_none()
     if not querry:
         raise HTTPException(
             status_code = 401,
             detail = "User not found"
         )
-    return querry
+    return UserBaseModel.model_validate(querry)

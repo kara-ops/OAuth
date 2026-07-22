@@ -1,11 +1,11 @@
 from app.database.redis import get_redis
 import json
 
-async def store_refresh_token(user_id:int, refresh_token:str)->None:
+def store_refresh_token(user_id:int, refresh_token:str)->None:
     redis = get_redis()
     key = f"refresh:{user_id}"
     ttl = 60*60*24*7
-    await redis.setex(key, ttl, refresh_token)
+    redis.setex(key, ttl, refresh_token)
     
 def verify_refresh_token(user_id:int, refresh_token:str)->bool:
     key = f"refresh:{user_id}"

@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession as Session
 from sqlalchemy import select
 import asyncio
 
+from app.schemas.Oauth_schema import UserModel,UserAuthModel,UserSessionModel
+
 from app.utils.hashing import hash_password,verify_password
 from app.utils.code_gen import gen_code,gen_url_token,get_uuid,user_agent_parse,sha_hash
 from app.utils.email_service import forgot_pass_mail
@@ -17,9 +19,10 @@ from app.core.security import create_access_token,create_refresh_token,decode_to
 
 
 async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User:
-    query = await db.execute(select(User).options(joinedload(User.auth)).where(User.email==google_user["email"]))
+    query = await db.execute(select(User).options(joinedload(User.auth),joinedload(User.session)).where(User.email==google_user["email"]))
     email = query.unique().scalar_one_or_none()
     if email:
+        fixed_db_result = (UserModel.model_validate(email))
 
         provider = None
         for auth in email.auth:
@@ -58,7 +61,7 @@ async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)
             except:
                 await db.rollback()
                 raise
-            return {"user":email,
+            return {"user":fixed_db_result,
                     "refresh":create_r,
                     "access":create_a
                     }
@@ -102,7 +105,7 @@ async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)
             except:
                 await db.rollback()
                 raise
-            return {"user":email,
+            return {"user":fixed_db_result,
                     "refresh":create_r,
                     "access": create_a
                     }
@@ -153,7 +156,7 @@ async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)
         except:
             await db.rollback()
             raise
-        return {"user":email,
+        return {"user":UserModel.model_validate(create_user),
                 "refresh":create_r,
                 "access": create_a
                 }
