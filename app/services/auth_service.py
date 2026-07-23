@@ -163,8 +163,7 @@ async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)
     
 async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
     query = await db.execute(select(User).where(User.email==email_id))  #db search for user exist or not
-    store = query.scalar_one_or_none()
-    email = UserBaseModel.model_validate(store)
+    email = query.scalar_one_or_none()
     if email:
         raise HTTPException(status_code=400,detail="Email already registered")
 
@@ -218,14 +217,18 @@ async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
 
     try:
         db.add(auth)
+
         await db.commit()
+        await db.refresh(create)
     except:
         await db.rollback()
         raise
 
+    stored_user = UserBaseModel.model_validate(create)
+
     return {"refresh":refresh,
             "access":access,
-            "user":create}
+            "user":stored_user}
 
 async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Session):
     query = await db.execute(select(User).where(User.email==email_id).options(joinedload(User.auth)))

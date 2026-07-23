@@ -137,7 +137,7 @@ def logout(res:Response,authorization: str = Header()):
     }
 
 @router.post("/login")
-def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db)):
+async def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db)):
     ip =""
     x_forwarded_for = req.headers.get("x-forwarded-for")
     if x_forwarded_for:
@@ -149,7 +149,7 @@ def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_d
 
     ua = req.headers.get("User-Agent")
 
-    login = auth_service.login_l_user(ip,ua,user.email,user.password,db)
+    login = await auth_service.login_l_user(ip,ua,user.email,user.password,db)
 
     res.set_cookie(
         key="refresh",
@@ -162,7 +162,7 @@ def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_d
     return {"access_token":login["access"],"token_type":"bearer"}
 
 @router.post("/create-user")
-def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db)):
+async def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db)):
 
 
     #user ip address
@@ -178,7 +178,7 @@ def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=Depends
     ua = req.headers.get("User-Agent")
 
     #service call
-    create = auth_service.create_l_user(ip,ua,user.email,user.password,db)
+    create = await auth_service.create_l_user(ip,ua,user.email,user.password,db)
 
     res.set_cookie(
         key="refresh",
