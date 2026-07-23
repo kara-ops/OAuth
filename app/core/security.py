@@ -9,6 +9,8 @@ from app.models.user_model import UserSession
 from app.utils.code_gen import sha_hash
 from app.utils.time_calc import current_time
 
+from app.schemas.Oauth_schema import UserSessionModel
+
 from uuid import uuid4
 
 
@@ -60,7 +62,8 @@ async def decode_token_r(token:str,db:Session)->dict:
         raise HTTPException(status_code=400,detail="Invalid token")
     
     query = await db.execute(select(UserSession).where(UserSession.session_id==payload["sid"]))
-    check = query.scalar_one_or_none()
+    store = query.scalar_one_or_none()
+    check = UserSessionModel.model_validate(store)
     if check is None:
         raise HTTPException(status_code=404,detail="Session not found")
     

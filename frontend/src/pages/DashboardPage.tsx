@@ -51,9 +51,25 @@ export const DashboardPage: React.FC = () => {
         setLoadingSessions(true);
         try {
           const res = await apiClient.get('/auth/get-session');
-          setSessions(Array.isArray(res.data) ? res.data : [res.data]);
-        } catch (error) {
+          // Backend now returns an object with arrays: { last_seen: [...], device_type: [...], device_name: [...] }
+          if (res.data && Array.isArray(res.data.last_seen)) {
+            const formattedSessions = res.data.last_seen.map((lastSeen: any, i: number) => ({
+              last_seen: lastSeen,
+              device_type: res.data.device_type?.[i],
+              device_name: res.data.device_name?.[i]
+            }));
+            setSessions(formattedSessions);
+          } else if (Array.isArray(res.data)) {
+            // Fallback just in case it returns the old array format
+            setSessions(res.data);
+          } else {
+            setSessions([res.data]);
+          }
+        } catch (error: any) {
           console.error('Failed to fetch sessions', error);
+          if (error.response?.status === 400) {
+            setSessions([]);
+          }
         } finally {
           setLoadingSessions(false);
         }

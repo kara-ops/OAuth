@@ -24,6 +24,9 @@ class UserPublic(BaseModel):
         from_attributes = True
 
 
+
+
+
 class UserAuthModel(BaseModel):
     id : int
     user_id : int 
@@ -83,6 +86,12 @@ class UserBaseModel(BaseModel):
 
     model_config = {"from_attributes":True}
 
+
+
+
+
+
+
 class ResetPassword(BaseModel):
     current_password : str
     new_password : str
@@ -96,6 +105,11 @@ class SetPassword(BaseModel):
 
 class AddPassword(BaseModel):
     new_password : str
+
+class GetSession(BaseModel):
+    last_seen : datetime | None
+    device_type : str | None
+    device_name : str | None
 
 
 

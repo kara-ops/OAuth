@@ -214,8 +214,8 @@ def add_pass(req:AddPassword,db:Session=Depends(get_db),user:User=Depends(get_cu
     return check
 
 @router.get("/get-session")
-def get_sessions(db:Session=Depends(get_db),user:User=Depends(get_current_user)):
-    call = auth_service.get_session(user.id,db)
+async def get_sessions(db:Session=Depends(get_db),user:User=Depends(get_current_user)):
+    call = await auth_service.get_session(user.id,db)
     return call
 
 

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession as Session
 from sqlalchemy import select
 import asyncio
 
-from app.schemas.Oauth_schema import UserModel,UserAuthModel,UserSessionModel
+from app.schemas.Oauth_schema import UserModel,UserAuthModel,UserSessionModel,UserBaseModel,GetSession
 
 from app.utils.hashing import hash_password,verify_password
 from app.utils.code_gen import gen_code,gen_url_token,get_uuid,user_agent_parse,sha_hash
@@ -163,7 +163,8 @@ async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)
     
 async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
     query = await db.execute(select(User).where(User.email==email_id))  #db search for user exist or not
-    email = query.scalar_one_or_none()
+    store = query.scalar_one_or_none()
+    email = UserBaseModel.model_validate(store)
     if email:
         raise HTTPException(status_code=400,detail="Email already registered")
 
@@ -382,19 +383,24 @@ async def add_password(user_id:int,password:str,db:Session):
 async def get_session(user_id:int,db:Session):
 
     query = await db.execute(select(UserSession.last_seen,UserSession.device_type,UserSession.device_name).where(UserSession.user_id==user_id))
-    get = query.mappings().all()
+    store = query.all()
+    get = (GetSession.model_validate(r) for r in store)
     if get == []:
         raise HTTPException(status_code=400,detail="No session's found")
 
-    session = [dict(row._mapping) for row in get]
+    session = {"last_seen": [ row.last_seen for row in store],
+               "device_type": [ row.device_type for row in store],
+               "device_name": [ row.device_name for row in store]
+               }
     return session
 
 async def refresh_token(token:str,db:Session):
-    token = decode_token_r(token,db)
+    token = await decode_token_r(token,db)
 
     
     query = await db.execute(select(UserSession).where(UserSession.session_id==token["sid"]))
-    get = query.scalar_one_or_none()
+    store = query.scalar_one_or_none()
+    get = UserSessionModel.model_validate(store)
     if get is None:
         raise HTTPException(status_code=400,detail="Session not found")
     
