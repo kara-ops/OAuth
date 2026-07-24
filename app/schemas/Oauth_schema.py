@@ -72,6 +72,18 @@ class UserModel(BaseModel):
 
     model_config = {"from_attributes":True}
 
+class UserAndAuthModel(BaseModel):
+    id : int 
+    email : str
+    name : str | None
+    is_active : bool
+    created_at : datetime
+    avatar_url : str | None
+
+    auth : list[UserAuthModel] | None
+
+    model_config = {"from_attributes":True}
+
 UserAuthModel.model_rebuild()
 UserSessionModel.model_rebuild()
 UserModel.model_rebuild()

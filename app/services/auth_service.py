@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession as Session
 from sqlalchemy import select
 import asyncio
 
-from app.schemas.Oauth_schema import UserModel,UserAuthModel,UserSessionModel,UserBaseModel,GetSession
+from app.schemas.Oauth_schema import UserModel,UserAuthModel,UserSessionModel,UserBaseModel,GetSession,UserAndAuthModel
 
 from app.utils.hashing import hash_password,verify_password
 from app.utils.code_gen import gen_code,gen_url_token,get_uuid,user_agent_parse,sha_hash
@@ -232,9 +232,11 @@ async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
 
 async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Session):
     query = await db.execute(select(User).where(User.email==email_id).options(joinedload(User.auth)))
-    email = query.scalar_one_or_none()
-    if not email:
+    store = query.unique().scalar_one_or_none()
+    if not store:
         raise HTTPException(status_code=400,detail="Wrong credentials")
+
+    email = UserAndAuthModel.model_validate(store)
 
     for auth in email.auth:
         provider = None
@@ -247,7 +249,6 @@ async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Sessio
     if not verify_password(password,hashed_password):
         raise HTTPException(status_code=400,detail="Wrong credentials")
     
-
 
     uuid_code = get_uuid()
     create_refresh = create_refresh_token(email.id,uuid_code)
