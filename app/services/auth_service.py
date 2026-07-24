@@ -2,7 +2,7 @@ from sqlalchemy.orm import joinedload
 from app.models.user_model import User,UserAuth,UserSession
 from fastapi import Request,HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession as Session
-from sqlalchemy import select
+from sqlalchemy import select,update
 import asyncio
 
 from app.schemas.Oauth_schema import UserModel,UserAuthModel,UserSessionModel,UserBaseModel,GetSession,UserAndAuthModel
@@ -126,9 +126,9 @@ async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)
 
         uuid_code = get_uuid()
         expire = c_plus_d(7)
-        create_r = create_refresh_token(email.id,uuid_code)
+        create_r = create_refresh_token(user.id,uuid_code)
         hash_r = sha_hash(create_r)
-        create_a = create_access_token(email.id,uuid_code)
+        create_a = create_access_token(user.id,uuid_code)
         ua_parse = user_agent_parse(user_agent)
 
         add_s = UserSession(
@@ -156,7 +156,7 @@ async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)
         except:
             await db.rollback()
             raise
-        return {"user":UserModel.model_validate(create_user),
+        return {"user":UserModel.model_validate(user),
                 "refresh":create_r,
                 "access": create_a
                 }
@@ -289,16 +289,11 @@ async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Sessio
 async def reset_pass(user_id:int,new_password:str,current_password:str,db:Session):
     if current_password == new_password:
         raise HTTPException(status_code=400,detail="new password cannot be same as current one")
-    
-    query = await db.execute(select(User).where(User.id==user_id))
-    check = query.scalar_one_or_none()
-
-    if not check:
-        raise HTTPException(status_code=400,detail="User does not exist")
 
     
     query = await db.execute(select(UserAuth).where(UserAuth.user_id==user_id,UserAuth.provider=="local"))
-    auth_check = query.scalar_one_or_none()
+    store = query.scalar_one_or_none()
+    auth_check = UserAuthModel.model_validate(store)
 
     if not auth_check:
         raise HTTPException(status_code=400,detail="login with email password first")
@@ -309,7 +304,7 @@ async def reset_pass(user_id:int,new_password:str,current_password:str,db:Sessio
         raise HTTPException(status_code=400,detail="incorrect current password")
     
     try:
-       auth_check.hashed_password=new_pass
+       store.hashed_password = new_password
 
        await db.commit()
     except:

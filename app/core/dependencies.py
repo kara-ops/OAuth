@@ -13,20 +13,7 @@ from app.models.user_model import User
 
 from app.schemas.Oauth_schema import UserBaseModel
 
-async def get_current_user(authorization: str = Header(), db:Session = Depends(get_db)):
-    if not authorization:
-        raise HTTPException(
-            status_code = 401, detail = "Header missing"
-        )
-    
-    parts = authorization.split()
-
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(
-            status_code = 401, detail = "Invalid token format"
-        )
-    
-    access = parts[1]
+async def get_current_user(access:str, db:Session = Depends(get_db)):
 
     decode = decode_token(access)
     if decode["type"] != "access":

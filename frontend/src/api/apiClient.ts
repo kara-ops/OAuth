@@ -9,8 +9,12 @@ const apiClient = axios.create({
 // Interceptor to attach access token to requests
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    if (config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    // append the token as a query parameter for get_current_user
+    config.params = { ...config.params, access: token };
   }
   return config;
 }, (error) => {

@@ -194,8 +194,8 @@ async def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=D
 
 
 @router.patch("/reset-password")
-def reset_password(user:ResetPassword,db:Session=Depends(get_db),auth:User=Depends(get_current_user)):
-    call_func = auth_service.reset_pass(auth.id,user.new_password,user.current_password,db)
+async def reset_password(user:ResetPassword,db:Session=Depends(get_db),auth:User=Depends(get_current_user)):
+    call_func = await auth_service.reset_pass(auth.id,user.new_password,user.current_password,db)
     return call_func
 
 
@@ -209,8 +209,8 @@ def set_password(token:str,user:SetPassword,db:Session=Depends(get_db)):
     return call_func
 
 @router.post("/add-password")
-def add_pass(req:AddPassword,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
-    check = auth_service.add_password(user.id,req.new_password,db)
+async def add_pass(req:AddPassword,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
+    check = await auth_service.add_password(user.id,req.new_password,db)
     return check
 
 @router.get("/get-session")
