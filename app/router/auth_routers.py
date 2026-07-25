@@ -65,8 +65,6 @@ async def google_callback(request:Request,res:Response,code:str, db:Session = De
 
     create_access =  get_or_create["access"]
     create_refresh = get_or_create["refresh"]
-
-    token_service.store_refresh_token(get_or_create["user"].id, create_refresh)
     
     redirect_res = RedirectResponse(url=f"http://localhost:5173/oauth/callback?access_token={create_access}")
     redirect_res.set_cookie(
@@ -85,13 +83,13 @@ async def google_callback(request:Request,res:Response,code:str, db:Session = De
 @router.post("/refresh", response_model = TokenResponse )
 async def refresh_logic(req:Request,res:Response,db:Session=Depends(get_db)):
     refresh_token = req.cookies.get("refresh")
+    
+    if not refresh_token:
+        raise HTTPException(status_code=401,detail="Token is missing")
 
     call = await auth_service.refresh_token(refresh_token,db)
     token = call["refresh"]
-    
-    token_service.delete_refresh_token(token)
 
-    token_service.store_refresh_token(call["sub"],token)
     res.set_cookie(
         key="refresh",
         max_age=60*60*24*7,
@@ -128,9 +126,7 @@ def logout(res:Response,authorization: str = Header()):
     remain_ttl = int(decode["exp"] - datetime.now(timezone.utc).timestamp())
     if remain_ttl <0:
         remain_ttl = 0
-    token_service.blacklist_token(decode["jti"],remain_ttl)
 
-    token_service.delete_refresh_token(decode["sub"])
     res.delete_cookie("refresh")
     return {
         "message":"logged out"
@@ -199,12 +195,12 @@ async def reset_password(user:ResetPassword,db:Session=Depends(get_db),auth:User
     return call_func
 
 
-@router.post("/forgot-password")
-def forgot_pass(user:ForgotPass,db:Session=Depends(get_db)):
-    return auth_service.forgot_password(user.email,db)
+# @router.post("/forgot-password")
+# def forgot_pass(user:ForgotPass,db:Session=Depends(get_db)):
+#     return auth_service.forgot_password(user.email,db)
 
-@router.patch("/set-password")
-def set_password(token:str,user:SetPassword,db:Session=Depends(get_db)):
+# @router.patch("/set-password")
+# def set_password(token:str,user:SetPassword,db:Session=Depends(get_db)):
     call_func = auth_service.new_password(user.code,user.new_password,db,token)
     return call_func
 
@@ -214,19 +210,7 @@ async def add_pass(req:AddPassword,db:Session=Depends(get_db),user:User=Depends(
     return check
 
 @router.get("/get-session")
-async def get_sessions(db:Session=Depends(get_db),user:User=Depends(get_current_user)):
-    call = await auth_service.get_session(user.id,db)
+async def get_sessions(db:Session=Depends(get_db),user:dict=Depends(get_current_user)):
+    call = await auth_service.get_session(user["user"].id,user["payload"]["sid"],db)
     return call
-
-
-
-
-    
-
-
-
-
-
-
-
 

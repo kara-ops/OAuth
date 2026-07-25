@@ -9,4 +9,4 @@ router = APIRouter(prefix = "/users", tags=["users"])
 
 @router.get("/me", response_model = UserPublic)
 def user_info(current_user = Depends(get_current_user)):
-    return current_user
+    return current_user["user"]

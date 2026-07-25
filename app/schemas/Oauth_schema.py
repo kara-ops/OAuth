@@ -119,9 +119,9 @@ class AddPassword(BaseModel):
     new_password : str
 
 class GetSession(BaseModel):
-    last_seen : datetime | None
-    device_type : str | None
-    device_name : str | None
+    last_seen : list[datetime] | None
+    device_type : list[str] | None
+    device_name : list[str] | None
 
 
 

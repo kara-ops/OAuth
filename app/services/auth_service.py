@@ -1,21 +1,25 @@
-from sqlalchemy.orm import joinedload
-from app.models.user_model import User,UserAuth,UserSession
 from fastapi import Request,HTTPException
+
+from app.models.user_model import User,UserAuth,UserSession
 from sqlalchemy.ext.asyncio import AsyncSession as Session
 from sqlalchemy import select,update
+from sqlalchemy.orm import joinedload
 import asyncio
 
 from app.schemas.Oauth_schema import UserModel,UserAuthModel,UserSessionModel,UserBaseModel,GetSession,UserAndAuthModel
 
 from app.utils.hashing import hash_password,verify_password
 from app.utils.code_gen import gen_code,gen_url_token,get_uuid,user_agent_parse,sha_hash
-from app.utils.email_service import forgot_pass_mail
+# from app.utils.email_service import forgot_pass_mail
 from app.utils.time_calc import c_plus_d,current_time
 
 
-from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key,concurrent_r_token,concurrent_first_request,get_concurrent_r_token
+from app.services.token_service import forgot_pass_key,get_forgot_pass_key,del_forgot_pass_key,concurrent_r_token,concurrent_first_request,get_concurrent_r_token,get_user_session,cache_user_session,delete_user_session
+from app.services import token_service
 
 from app.core.security import create_access_token,create_refresh_token,decode_token,decode_token_r
+
+from starlette.concurrency import run_in_threadpool
 
 
 async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User:
@@ -178,7 +182,7 @@ async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
     expiry = c_plus_d(7) # current time + given days
 
     ua_parsed = user_agent_parse(user_agent)
-    hash_pass = hash_password(password)
+    hash_pass = await run_in_threadpool(hash_password,password)
     uuid_code = get_uuid()
 
     # create auth  tokens
@@ -231,7 +235,7 @@ async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
             "user":stored_user}
 
 async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Session):
-    query = await db.execute(select(User).where(User.email==email_id).options(joinedload(User.auth)))
+    query = await db.execute(select(User).where(User.email==email_id).options(joinedload(User.auth),joinedload(User.session)))
     store = query.unique().scalar_one_or_none()
     if not store:
         raise HTTPException(status_code=400,detail="Wrong credentials")
@@ -246,7 +250,7 @@ async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Sessio
     if not provider:
         raise HTTPException(status_code=400,detail="Wrong credentials")
     
-    if not verify_password(password,hashed_password):
+    if not await run_in_threadpool(verify_password,password,hashed_password):
         raise HTTPException(status_code=400,detail="Wrong credentials")
     
 
@@ -277,6 +281,7 @@ async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Sessio
         db.add(auth_s)
         await db.commit()
         create_access = create_access_token(email.id,uuid_code)
+        await delete_user_session(email.id,uuid_code)
     except:
         await db.rollback()
         raise
@@ -298,7 +303,7 @@ async def reset_pass(user_id:int,new_password:str,current_password:str,db:Sessio
     if not auth_check:
         raise HTTPException(status_code=400,detail="login with email password first")
     
-    new_pass = hash_password(new_password)
+    new_pass = await run_in_threadpool(hash_password,new_password)
 
     if not verify_password(current_password,auth_check.hashed_password):
         raise HTTPException(status_code=400,detail="incorrect current password")
@@ -314,24 +319,24 @@ async def reset_pass(user_id:int,new_password:str,current_password:str,db:Sessio
     return {"successfully changed"}
 
 # password forgotten
-async def forgot_password(email:str,db:Session):
-    query = await db.execute(select(UserAuth).join(User).where(User.email==email,UserAuth.provider=="local"))
-    check = query.scalar_one_or_none()
-    if not check:
-        return {"If an account exists, we've sent you instructions"}
+# async def forgot_password(email:str,db:Session):
+#     query = await db.execute(select(UserAuth).join(User).where(User.email==email,UserAuth.provider=="local"))
+#     check = query.scalar_one_or_none()
+#     if not check:
+#         return {"If an account exists, we've sent you instructions"}
     
-    code = gen_code()  #generate a unique code
-    url_token = gen_url_token()  #generate token for the url
+#     code = gen_code()  #generate a unique code
+#     url_token = gen_url_token()  #generate token for the url
 
-    set_code = forgot_pass_key(url_token,check.user_id,code)  #code is joint with
+#     set_code = forgot_pass_key(url_token,check.user_id,code)  #code is joint with
 
-    mail = forgot_pass_mail(code,f"http://127.0.0.1:8000/auth/set_password?token={url_token}")
+#     mail = forgot_pass_mail(code,f"http://127.0.0.1:8000/auth/set_password?token={url_token}")
 
-    return {"If an account exists, we've sent you instructions"}
+#     return {"If an account exists, we've sent you instructions"}
 
 
 
-async def new_password(code:str,password:str,db:Session,token:str):
+# async def new_password(code:str,password:str,db:Session,token:str):
     user_id = get_forgot_pass_key(token,code)
     if user_id is None:
         raise HTTPException(status_code=400,detail="Invalid or expired code")
@@ -364,7 +369,7 @@ async def add_password(user_id:int,password:str,db:Session):
     if check is not None:
         raise HTTPException(status_code=400,detail="This email has a password, to change password use forgot-password or reset password")
     
-    hash_pass = hash_password(password)
+    hash_pass = await run_in_threadpool(hash_password,password)
 
     add_auth = UserAuth(
         user_id = user_id,
@@ -379,18 +384,23 @@ async def add_password(user_id:int,password:str,db:Session):
         raise
     return {"Password added successfully"}
 
-async def get_session(user_id:int,db:Session):
+async def get_session(user_id:int,session_id:str,db:Session):
+
+    get_session = await get_user_session(user_id,session_id)
+    if get_session:
+        return get_session
 
     query = await db.execute(select(UserSession.last_seen,UserSession.device_type,UserSession.device_name).where(UserSession.user_id==user_id))
     store = query.all()
-    get = (GetSession.model_validate(r) for r in store)
-    if get == []:
+    if not store:
         raise HTTPException(status_code=400,detail="No session's found")
 
-    session = {"last_seen": [ row.last_seen for row in store],
-               "device_type": [ row.device_type for row in store],
-               "device_name": [ row.device_name for row in store]
-               }
+    session = [{"last_seen": row.last_seen,
+               "device_type": row.device_type,
+               "device_name": row.device_name
+               } for row in store
+               ]
+    await cache_user_session(user_id,session_id,session)
     return session
 
 async def refresh_token(token:str,db:Session):
@@ -403,13 +413,13 @@ async def refresh_token(token:str,db:Session):
     if get is None:
         raise HTTPException(status_code=400,detail="Session not found")
     
-    redis_set = concurrent_first_request(token["sid"])
-    redis_token = get_concurrent_r_token(token["sid"])
+    redis_set = await concurrent_first_request(token["sid"])
+
     if redis_set == True:
         pass    
     else:
         for i in range(200):
-            call_redis = get_concurrent_r_token(token["sid"])
+            call_redis = await get_concurrent_r_token(token["sid"])
             if call_redis and call_redis["status"] == "done":
                 return {"access":call_redis["access"],
                         "refresh":call_redis["refresh"],
@@ -435,14 +445,8 @@ async def refresh_token(token:str,db:Session):
     except:
         await db.rollback()
         raise
-    concurrent_r_token(token["sid"],new_a,new_r)
+    await concurrent_r_token(token["sid"],new_a,new_r)
     return {"refresh":new_r,
             "access":new_a,
             "sub":token["sub"]}
-    
-    
-
-    
-
-
     

@@ -4,8 +4,8 @@ from argon2 import PasswordHasher
 ph = PasswordHasher(parallelism=2,
                     hash_len=32,
                     salt_len=16,
-                    memory_cost=64*1024,
-                    time_cost=3
+                    memory_cost=32*1024,
+                    time_cost=2
 )
 
 def hash_password(password:str)->str:
