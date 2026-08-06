@@ -21,6 +21,9 @@ from app.core.security import create_access_token,create_refresh_token,decode_to
 
 from starlette.concurrency import run_in_threadpool
 
+from time import perf_counter
+
+
 
 async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User:
     query = await db.execute(select(User).options(joinedload(User.auth),joinedload(User.session)).where(User.email==google_user["email"]))
@@ -166,10 +169,13 @@ async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)
                 }
     
 async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
+    start = perf_counter()
     query = await db.execute(select(User).where(User.email==email_id))  #db search for user exist or not
     email = query.scalar_one_or_none()
     if email:
         raise HTTPException(status_code=400,detail="Email already registered")
+    t1 = perf_counter()
+
 
     
     create = User(
@@ -178,18 +184,28 @@ async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
 
     db.add(create)
     await db.flush()
-    
+
+    t3 = perf_counter()
+
+
+    hash_pass = await run_in_threadpool(hash_password,password)
+
+
+    t4 = perf_counter()
+
     expiry = c_plus_d(7) # current time + given days
 
     ua_parsed = user_agent_parse(user_agent)
-    hash_pass = await run_in_threadpool(hash_password,password)
+    
     uuid_code = get_uuid()
 
     # create auth  tokens
     access = create_access_token(create.id,uuid_code)
     refresh = create_refresh_token(create.id,uuid_code)
+
     hash_r = sha_hash(refresh)
 
+    t5 = perf_counter()
 
     add_s = UserSession(
 
@@ -209,8 +225,10 @@ async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
         expires_at = expiry
         
         )
-    
+
     db.add(add_s)
+
+    t6 = perf_counter()
 
 
     auth = UserAuth(
@@ -227,6 +245,16 @@ async def create_l_user(ip,user_agent:str,email_id:str,password:str,db:Session):
     except:
         await db.rollback()
         raise
+
+    t7 = perf_counter()
+
+    print(f"""
+    DB query   : {(t3-t1)*1000:.2f}) ms
+    Password hash  : {(t4-t3)*1000:.2f} ms
+    whole parsing : {(t5-t4)*1000:.2f} ms
+    session add  : {(t6-t5)*1000:.2f}
+    whole db commit : {(t7-t5)*1000:.2f}
+    """)
 
     stored_user = UserBaseModel.model_validate(create)
 

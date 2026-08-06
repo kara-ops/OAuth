@@ -9,7 +9,7 @@ This repository contains a FastAPI authentication backend that supports both Goo
 - Pydantic v2
 - python-jose
 - httpx
-- passlib[bcrypt]
+- argon2-cffi (Password Hashing)
 
 ## What It Provides
 - Google login and callback handling
@@ -19,7 +19,6 @@ This repository contains a FastAPI authentication backend that supports both Goo
 - Session tracking per device
 - Password reset and add-password flows
 - Protected user profile endpoints
-- Login rate limiting
 
 ## Project Layout
 - [app/main.py](app/main.py) is the application entry point.
@@ -34,7 +33,7 @@ On startup, the app checks that PostgreSQL and Redis are reachable before servin
 
 Google login creates or links a user, stores a refresh-session record in PostgreSQL, and returns a short-lived access token plus an HTTP-only refresh cookie. Local login and sign-up follow the same session flow.
 
-Important detail: refresh tokens are hashed and stored in the `user_session` table. Redis is used for login rate limiting and short-lived cache helpers, not as the primary refresh-token store.
+Important detail: refresh tokens are hashed and stored in the `user_session` table. Redis is used for short-lived cache helpers, not as the primary refresh-token store.
 
 ## Environment Variables
 Create a `.env` file from `.env.example` and provide values for:
@@ -117,9 +116,8 @@ This design allows one user account to be linked to multiple auth providers.
 
 ### Google Login
 1. The client hits `GET /auth/oauth`.
-2. The backend rate-limits the request by IP.
-3. The browser is redirected to Google.
-4. Google redirects back to `GET /auth/google/callback`.
+2. The browser is redirected to Google.
+3. Google redirects back to `GET /auth/google/callback`.
 5. The backend exchanges the code for Google user data.
 6. The user is created or linked in PostgreSQL.
 7. A session row is created with device and browser metadata.
@@ -142,10 +140,19 @@ This design allows one user account to be linked to multiple auth providers.
 2. The backend validates the token type.
 3. The refresh cookie is deleted.
 
+## Load Testing
+
+The repository includes a Locust load testing script (`locustfile.py`) with several user scenarios designed to test specific limits and potential race conditions of the system. You can run it with `locust -f locustfile.py`.
+
+### Scenarios & Expected Failures
+- **MixedWorkloadUser**: Simulates realistic "Day in the Life" user behavior (fetching profiles, refreshing tokens, logging in/out).
+- **LoginFloodUser (CPU Bound)**: Repeatedly logs in to test CPU bottlenecks caused by password hashing. **Expected failures**: You will likely observe CPU constraints and increased latency due to Argon2 hashing overhead.
+- **RefreshStormUser (Race Condition Validation)**: Rapidly hits the refresh endpoint to validate the Redis single-flight lock mechanism. **Expected failures**: You will see some `401 Unauthorized` responses. Because tokens are rotated rapidly, client cookies can get out of sync with the backend state. This is an expected race condition behavior of the single-use refresh token rotation design.
+- **SignupFloodUser (DB & CPU Bound)**: Continuously registers new accounts to test database write capacity and CPU bounds. **Expected failures**: You may observe database connection pool exhaustion or CPU constraints.
+
 ## Notes
 - Access tokens are short-lived JWTs and should be sent as `Authorization: Bearer <token>`.
 - Refresh tokens are stored in an HTTP-only cookie named `refresh`.
-- Login attempts are rate-limited per IP.
 - The repository includes a frontend app under `frontend/`, but the backend can run independently.
 
 ## Existing Migrations

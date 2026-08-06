@@ -1,16 +1,28 @@
 from fastapi import APIRouter,Depends, Header, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 from fastapi.responses import RedirectResponse
-from app.core.config import settings
+
 from app.database.postgres import get_db
+
 from app.utils import oauth_client 
-from app.services import auth_service 
+
 from app.core import security 
-from datetime import datetime, timezone
-from app.services import token_service 
-from app.models.user_model import User
-from app.schemas.Oauth_schema import RefreshRequest, TokenResponse, UserPublic, UserLogin, ResetPassword, ForgotPass, SetPassword, AddPassword
+from app.core.config import settings
 from app.core.dependencies import get_current_user
+
+from datetime import datetime, timezone
+
+from app.services import token_service 
+from app.services import auth_service
+
+from app.models.user_model import User
+
+from app.schemas.Oauth_schema import RefreshRequest, TokenResponse, UserPublic, UserLogin, ResetPassword, ForgotPass, SetPassword, AddPassword
+
+from app.ratelimiter.app.dependency.tb_dependency import token_bucket_rate_limiter
+from app.ratelimiter.app.dependency.fw_rate_limit import fixed_window_rate_limiter
+from app.ratelimiter.app.dependency.sl_dependency import sliding_window_rate_limiter
+
 
 router = APIRouter(prefix="/auth", tags =["auth"])
 
@@ -39,7 +51,7 @@ def google_login(request : Request)->str:
 
 @router.get("/google/callback")
 #oauth_client = oc, auth_service = a, security = s, oauth_schema = os
-async def google_callback(request:Request,res:Response,code:str, db:Session = Depends(get_db)):
+async def google_callback(request:Request,res:Response,code:str, db:Session = Depends(get_db),_:None=Depends(fixed_window_rate_limiter(2,5,"google_callback",Request))):
     try:
         access_token = await oauth_client.exchange_code_for_token(code)
         print("access_token : ", access_token)
@@ -190,8 +202,8 @@ async def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=D
 
 
 @router.patch("/reset-password")
-async def reset_password(user:ResetPassword,db:Session=Depends(get_db),auth:User=Depends(get_current_user)):
-    call_func = await auth_service.reset_pass(auth.id,user.new_password,user.current_password,db)
+async def reset_password(user:ResetPassword,db:Session=Depends(get_db),auth:User=Depends(get_current_user), _:None=Depends(sliding_window_rate_limiter(window=5,limit=1,rate_limit_ep="reset_password"))):
+    call_func = await auth_service.reset_pass(auth["user"].id,user.new_password,user.current_password,db)
     return call_func
 
 
@@ -205,8 +217,8 @@ async def reset_password(user:ResetPassword,db:Session=Depends(get_db),auth:User
     return call_func
 
 @router.post("/add-password")
-async def add_pass(req:AddPassword,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
-    check = await auth_service.add_password(user.id,req.new_password,db)
+async def add_pass(req:AddPassword,db:Session=Depends(get_db),user:User=Depends(get_current_user),_:None=Depends(token_bucket_rate_limiter(5,1,"get_sessions"))):
+    check = await auth_service.add_password(user["user"].id,req.new_password,db)
     return check
 
 @router.get("/get-session")
@@ -214,3 +226,8 @@ async def get_sessions(db:Session=Depends(get_db),user:dict=Depends(get_current_
     call = await auth_service.get_session(user["user"].id,user["payload"]["sid"],db)
     return call
 
+
+
+##,_:None=Depends(sliding_window_rate_limiter(window=10,limit=3,rate_limit_ep="refresh_login"))
+#, _:None=Depends(sliding_window_rate_limiter(window=4,limit=1,rate_limit_ep="local_login"))
+#, _:None=Depends(sliding_window_rate_limiter(window=4,limit=1,rate_limit_ep="create_local_user"))
