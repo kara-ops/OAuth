@@ -17,7 +17,8 @@ This repository contains a FastAPI authentication backend that supports both Goo
 - JWT access and refresh tokens
 - Refresh-token rotation
 - Session tracking per device
-- Password reset and add-password flows
+- Password reset, forgot-password, and add-password flows
+- Email delivery for forgot-password flows (via Resend)
 - Protected user profile endpoints
 
 ## Project Layout
@@ -94,6 +95,8 @@ If you run the frontend too, it expects the backend to be available locally and 
 | POST | `/auth/login` | Log in with email and password |
 | POST | `/auth/create-user` | Create a local email/password account |
 | PATCH | `/auth/reset-password` | Change the current password for a logged-in local user |
+| POST | `/auth/forgot-password` | Send a password reset email with a verification code |
+| PATCH | `/auth/set-password` | Set a new password using a verification code and url token |
 | POST | `/auth/add-password` | Add a password to an existing Google-only account |
 | GET | `/auth/get-session` | Return cached or database-backed session details |
 
@@ -139,6 +142,13 @@ This design allows one user account to be linked to multiple auth providers.
 1. The client calls `POST /auth/logout` with a bearer access token.
 2. The backend validates the token type.
 3. The refresh cookie is deleted.
+
+### Forgot Password
+1. The client posts an email to `POST /auth/forgot-password`.
+2. The backend generates a verification code and stores it in Redis.
+3. The backend uses `resend` to email the code and a reset link to the user.
+4. The client submits the code and a new password to `PATCH /auth/set-password?token={url_token}`.
+5. The backend verifies the code, updates the password, and clears the Redis key.
 
 ## Load Testing
 

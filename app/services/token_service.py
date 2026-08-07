@@ -1,45 +1,7 @@
 from app.database.redis import get_redis
 import json
 
-async def store_refresh_token(user_id:int, refresh_token:str)->None:
-    redis = get_redis()
-    key = f"refresh:{user_id}"
-    ttl = 60*60*24*7
-    await redis.setex(key, ttl, refresh_token)
-    
-async def verify_refresh_token(user_id:int, refresh_token:str)->bool:
-    key = f"refresh:{user_id}"
-    redis = get_redis()
-    check_value = redis.get(key)
-    return await check_value==refresh_token
 
-async def delete_refresh_token(user_id:int)->None:
-    redis = get_redis()
-    key = f"refresh:{user_id}"
-    await redis.delete(key)
-
-async def blacklist_token(jti:str, ttl:int)->None:
-    redis = get_redis()
-    key = f"blacklist:{jti}"
-    await redis.setex(key, ttl, "1")
-
-async def is_blacklisted(jti:str)->bool:
-    redis = get_redis()
-    key = f"blacklist:{jti}"
-    return await redis.exists(key)==1
-
-async def rate_limiter(ip:str)->bool:
-    redis = get_redis()
-    ttl = 60
-    key = f"login attempts:{ip}"
-    attemps = await redis.incr(key)
-    if attemps == 1:
-        await redis.expire(key, ttl)
-
-    if attemps >= 5:
-        return False
-    else:
-        return True
     
 async def forgot_pass_key(token:str,user_id:int,code:str):
     redis = get_redis()
@@ -114,6 +76,47 @@ async def delete_user_session(user_id:int,session_id:str):
     redis = get_redis()
     key = f"get_my_session:{user_id}:{session_id}"
     await redis.delete(key)
+
+# async def store_refresh_token(user_id:int, refresh_token:str)->None:
+#     redis = get_redis()
+#     key = f"refresh:{user_id}"
+#     ttl = 60*60*24*7
+#     await redis.setex(key, ttl, refresh_token)
+    
+# async def verify_refresh_token(user_id:int, refresh_token:str)->bool:
+#     key = f"refresh:{user_id}"
+#     redis = get_redis()
+#     check_value = redis.get(key)
+#     return await check_value==refresh_token
+
+# async def delete_refresh_token(user_id:int)->None:
+#     redis = get_redis()
+#     key = f"refresh:{user_id}"
+#     await redis.delete(key)
+
+# async def blacklist_token(jti:str, ttl:int)->None:
+#     redis = get_redis()
+#     key = f"blacklist:{jti}"
+#     await redis.setex(key, ttl, "1")
+
+# async def is_blacklisted(jti:str)->bool:
+#     redis = get_redis()
+#     key = f"blacklist:{jti}"
+#     return await redis.exists(key)==1
+
+# async def rate_limiter(ip:str)->bool:
+    # redis = get_redis()
+    # ttl = 60
+    # key = f"login attempts:{ip}"
+    # attemps = await redis.incr(key)
+    # if attemps == 1:
+    #     await redis.expire(key, ttl)
+
+    # if attemps >= 5:
+    #     return False
+    # else:
+    #     return True
+
 
 
 

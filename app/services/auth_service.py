@@ -10,7 +10,7 @@ from app.schemas.Oauth_schema import UserModel,UserAuthModel,UserSessionModel,Us
 
 from app.utils.hashing import hash_password,verify_password
 from app.utils.code_gen import gen_code,gen_url_token,get_uuid,user_agent_parse,sha_hash
-# from app.utils.email_service import forgot_pass_mail
+from app.utils.email_service import forgot_pass_mail
 from app.utils.time_calc import c_plus_d,current_time
 
 
@@ -347,24 +347,24 @@ async def reset_pass(user_id:int,new_password:str,current_password:str,db:Sessio
     return {"successfully changed"}
 
 # password forgotten
-# async def forgot_password(email:str,db:Session):
-#     query = await db.execute(select(UserAuth).join(User).where(User.email==email,UserAuth.provider=="local"))
-#     check = query.scalar_one_or_none()
-#     if not check:
-#         return {"If an account exists, we've sent you instructions"}
+async def forgot_password(email:str,db:Session):
+    query = await db.execute(select(UserAuth).join(User).where(User.email==email,UserAuth.provider=="local"))
+    check = query.scalar_one_or_none()
+    if not check:
+        return {"If an account exists, we've sent you instructions"}
     
-#     code = gen_code()  #generate a unique code
-#     url_token = gen_url_token()  #generate token for the url
+    code = gen_code()  #generate a unique code
+    url_token = gen_url_token()  #generate token for the url
 
-#     set_code = forgot_pass_key(url_token,check.user_id,code)  #code is joint with
+    set_code = forgot_pass_key(url_token,check.user_id,code)  #code is joint with
 
-#     mail = forgot_pass_mail(code,f"http://127.0.0.1:8000/auth/set_password?token={url_token}")
+    mail = forgot_pass_mail(code,f"http://127.0.0.1:8000/auth/set_password?token={url_token}")
 
-#     return {"If an account exists, we've sent you instructions"}
+    return {"If an account exists, we've sent you instructions"}
 
 
 
-# async def new_password(code:str,password:str,db:Session,token:str):
+async def new_password(code:str,password:str,db:Session,token:str):
     user_id = get_forgot_pass_key(token,code)
     if user_id is None:
         raise HTTPException(status_code=400,detail="Invalid or expired code")

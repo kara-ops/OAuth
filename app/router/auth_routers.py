@@ -93,7 +93,7 @@ async def google_callback(request:Request,res:Response,code:str, db:Session = De
 
 #rotate refresh token
 @router.post("/refresh", response_model = TokenResponse )
-async def refresh_logic(req:Request,res:Response,db:Session=Depends(get_db)):
+async def refresh_logic(req:Request,res:Response,db:Session=Depends(get_db),_:None=Depends(sliding_window_rate_limiter(window=10,limit=3,rate_limit_ep="refresh_login"))):
     refresh_token = req.cookies.get("refresh")
     
     if not refresh_token:
@@ -145,7 +145,7 @@ def logout(res:Response,authorization: str = Header()):
     }
 
 @router.post("/login")
-async def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db)):
+async def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db), _:None=Depends(sliding_window_rate_limiter(window=4,limit=1,rate_limit_ep="local_login"))):
     ip =""
     x_forwarded_for = req.headers.get("x-forwarded-for")
     if x_forwarded_for:
@@ -170,7 +170,7 @@ async def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends
     return {"access_token":login["access"],"token_type":"bearer"}
 
 @router.post("/create-user")
-async def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db)):
+async def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db), _:None=Depends(sliding_window_rate_limiter(window=4,limit=1,rate_limit_ep="create_local_user"))):
 
 
     #user ip address
@@ -207,13 +207,13 @@ async def reset_password(user:ResetPassword,db:Session=Depends(get_db),auth:User
     return call_func
 
 
-# @router.post("/forgot-password")
-# def forgot_pass(user:ForgotPass,db:Session=Depends(get_db)):
-#     return auth_service.forgot_password(user.email,db)
+@router.post("/forgot-password")
+async def forgot_pass(user:ForgotPass,db:Session=Depends(get_db)):
+    return await auth_service.forgot_password(user.email,db)
 
-# @router.patch("/set-password")
-# def set_password(token:str,user:SetPassword,db:Session=Depends(get_db)):
-    call_func = auth_service.new_password(user.code,user.new_password,db,token)
+@router.patch("/set-password")
+async def set_password(token:str,user:SetPassword,db:Session=Depends(get_db)):
+    call_func = await auth_service.new_password(user.code,user.new_password,db,token)
     return call_func
 
 @router.post("/add-password")
@@ -227,7 +227,3 @@ async def get_sessions(db:Session=Depends(get_db),user:dict=Depends(get_current_
     return call
 
 
-
-##,_:None=Depends(sliding_window_rate_limiter(window=10,limit=3,rate_limit_ep="refresh_login"))
-#, _:None=Depends(sliding_window_rate_limiter(window=4,limit=1,rate_limit_ep="local_login"))
-#, _:None=Depends(sliding_window_rate_limiter(window=4,limit=1,rate_limit_ep="create_local_user"))
