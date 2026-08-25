@@ -108,11 +108,7 @@ export const DashboardPage: React.FC = () => {
         
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-            activeTab === 'profile' 
-              ? 'bg-blue-50 text-blue-700 font-medium' 
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
+          className={`sidebar-tab ${activeTab === 'profile' ? 'active' : ''}`}
         >
           <UserIcon size={20} />
           Profile Information
@@ -120,11 +116,7 @@ export const DashboardPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('security')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-            activeTab === 'security' 
-              ? 'bg-blue-50 text-blue-700 font-medium' 
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
+          className={`sidebar-tab ${activeTab === 'security' ? 'active' : ''}`}
         >
           <KeyRound size={20} />
           Change Password
@@ -132,11 +124,7 @@ export const DashboardPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('sessions')}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-            activeTab === 'sessions' 
-              ? 'bg-blue-50 text-blue-700 font-medium' 
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
+          className={`sidebar-tab ${activeTab === 'sessions' ? 'active' : ''}`}
         >
           <Monitor size={20} />
           Active Sessions

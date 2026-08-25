@@ -68,6 +68,7 @@ export const LoginPage: React.FC = () => {
             </Link>
           </div>
 
+
           {error && <p className="error-text mb-4">{error}</p>}
           
           <Button type="submit" className="w-full mb-4" isLoading={loading}>

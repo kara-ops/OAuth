@@ -86,7 +86,11 @@ a:hover {
 .form-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 1px var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.form-input:active {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 /* Buttons */
@@ -99,18 +103,30 @@ a:hover {
   font-weight: 500;
   font-family: 'Inter', sans-serif;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
   gap: 0.5rem;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn-primary {
   background-color: var(--accent-primary);
   color: white;
+  box-shadow: 0 1px 3px 0 rgba(37, 99, 235, 0.3), 0 1px 2px -1px rgba(37, 99, 235, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--accent-hover);
+  box-shadow: 0 4px 12px 0 rgba(37, 99, 235, 0.35), 0 2px 4px -1px rgba(37, 99, 235, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 1px 2px 0 rgba(37, 99, 235, 0.2);
+  background-color: #1e40af;
+  transition-duration: 0.05s;
 }
 
 .btn-primary:disabled {
@@ -122,11 +138,22 @@ a:hover {
   background-color: transparent;
   border-color: var(--border-color);
   color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-outline:hover {
   background-color: var(--bg-hover);
   text-decoration: none;
+  border-color: #d1d5db;
+  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.btn-outline:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+  background-color: #e5e7eb;
+  transition-duration: 0.05s;
 }
 
 /* Utilities */
@@ -233,4 +260,49 @@ a:hover {
 /* Dashboard spacing */
 .space-y-4 > * + * {
   margin-top: 1rem;
+}
+
+/* Dashboard sidebar tabs */
+.sidebar-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  text-align: left;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  width: 100%;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-tab:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-tab:active {
+  transform: scale(0.97);
+  background-color: #e5e7eb;
+  transition-duration: 0.05s;
+}
+
+.sidebar-tab.active {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+.sidebar-tab.active:active {
+  background-color: #dbeafe;
+}
+
+/* Links with click feedback */
+a:active {
+  opacity: 0.7;
 }
