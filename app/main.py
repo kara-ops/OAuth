@@ -21,7 +21,7 @@ async def lifespan(app:FastAPI):
     
     try :
         redis = get_redis()
-        pong = redis.ping()
+        pong = await redis.ping()
         print("Redis connection working")
     except Exception as e:
         raise RuntimeError(F"Redis connection failed {e}")
@@ -46,3 +46,8 @@ app.add_middleware(
 
 app.include_router(auth_routers)
 app.include_router(user_router)
+
+@app.get("/")
+@app.head("/")
+async def root():
+    return {"status": "ok"}
