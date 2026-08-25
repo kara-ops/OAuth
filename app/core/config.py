@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     RESEND_API_KEY:str
     RESEND_FROM_EMAIL:str = "onboarding@resend.dev"
 
+    FRONTEND_URL : str = "http://localhost:5173"
+    BACKEND_URL : str = "http://localhost:8000"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

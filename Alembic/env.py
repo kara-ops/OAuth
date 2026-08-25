@@ -5,9 +5,19 @@ from sqlalchemy import pool
 
 from alembic import context
 
+import os
+import time
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Override sqlalchemy.url from environment variable if available.
+# Convert asyncpg URL to sync psycopg2 URL since alembic runs synchronously.
+db_url = os.environ.get("DATABASE_URL")
+if db_url:
+    sync_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+    config.set_main_option("sqlalchemy.url", sync_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -16,10 +26,7 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadat
 import sys
-import os
 
 # Add the project root (OAUTH/) to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -70,13 +77,24 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+    # Retry connection to handle Docker startup ordering
+    retries = 10
+    for attempt in range(retries):
+        try:
+            with connectable.connect() as connection:
+                context.configure(
+                    connection=connection, target_metadata=target_metadata
+                )
 
-        with context.begin_transaction():
-            context.run_migrations()
+                with context.begin_transaction():
+                    context.run_migrations()
+            break
+        except Exception as e:
+            if attempt < retries - 1:
+                print(f"Database not ready (attempt {attempt + 1}/{retries}), retrying in 2s... ({e})")
+                time.sleep(2)
+            else:
+                raise
 
 
 if context.is_offline_mode():
