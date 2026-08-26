@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../api/apiClient';
-import { Loader2, Monitor, Smartphone, KeyRound, User as UserIcon, Shield, ChevronDown } from 'lucide-react';
+import { Loader2, Monitor, Smartphone, KeyRound, User as UserIcon, ChevronDown } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
