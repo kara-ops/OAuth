@@ -51,7 +51,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
-        <Route index element={<LandingPage />} />
+        <Route index element={<Navigate to="/login" replace />} />
         
         {/* Public auth routes - hidden if logged in */}
         <Route path="login" element={<PublicRoute><LoginPage /></PublicRoute>} />

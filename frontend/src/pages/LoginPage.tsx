@@ -38,11 +38,10 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center flex-1 mt-12">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center flex-1 w-full max-w-md mx-auto">
+      <Card className="w-full">
         <div className="text-center mb-6">
-          <h2 className="title text-3xl">Welcome Back</h2>
-          <p className="subtitle">Sign in to your account</p>
+          <h2 className="title text-2xl">Sign In</h2>
         </div>
         
         <form onSubmit={handleLocalLogin}>

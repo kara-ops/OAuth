@@ -38,11 +38,10 @@ export const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center flex-1 mt-12">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center flex-1 w-full max-w-md mx-auto">
+      <Card className="w-full">
         <div className="text-center mb-6">
-          <h2 className="title text-3xl">Create Account</h2>
-          <p className="subtitle">Join us to get started</p>
+          <h2 className="title text-2xl">Create Account</h2>
         </div>
         
         <form onSubmit={handleSignup}>

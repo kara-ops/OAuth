@@ -14,37 +14,26 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="nav-header">
-      <Link to="/" className="nav-brand">
-        <ShieldCheck className="text-primary" size={24} />
-        <span>Authenticator</span>
-      </Link>
-      
-      <div className="flex items-center gap-4">
-        {user ? (
-          <>
-            <Link to="/dashboard">
-              <Button variant="outline" className="gap-2">
-                <User size={18} />
-                Dashboard
-              </Button>
-            </Link>
-            <Button variant="primary" onClick={handleLogout} className="gap-2">
-              <LogOut size={18} />
-              Logout
+    <nav className="nav-header justify-end">
+      {user ? (
+        <div className="flex items-center gap-4">
+          <Link to="/dashboard">
+            <Button variant="outline" className="gap-2">
+              <User size={18} />
+              Dashboard
             </Button>
-          </>
-        ) : (
-          <>
-            <Link to="/login">
-              <Button variant="outline">Sign In</Button>
-            </Link>
-            <Link to="/signup">
-              <Button variant="primary">Get Started</Button>
-            </Link>
-          </>
-        )}
-      </div>
+          </Link>
+          <Button variant="primary" onClick={handleLogout} className="gap-2">
+            <LogOut size={18} />
+            Logout
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-gray-700 font-semibold text-lg">
+          <ShieldCheck className="text-primary" size={24} />
+          <span>Authenticator</span>
+        </div>
+      )}
     </nav>
   );
 };
