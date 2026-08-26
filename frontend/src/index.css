@@ -238,7 +238,7 @@ a:hover {
 
 /* Helpers */
 .h-screen { height: 100vh; }
-.min-h-[80vh] { min-height: 80vh; }
+.min-h-\[80vh\] { min-height: 80vh; }
 .text-lg { font-size: 1.125rem; }
 .text-xl { font-size: 1.25rem; }
 .text-3xl { font-size: 1.875rem; }
