@@ -1,8 +1,11 @@
 import axios from 'axios';
 
+// Use environment variable for backend URL, fallback to localhost for development
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 // Create base instance
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: API_URL,
   withCredentials: true, // Important for sending/receiving the refresh cookie
 });
 
@@ -54,7 +57,7 @@ apiClient.interceptors.response.use(
       try {
         // Attempt to refresh the token
         const response = await axios.post(
-          'http://localhost:8000/auth/refresh',
+          `${API_URL}/auth/refresh`,
           {},
           { withCredentials: true }
         );

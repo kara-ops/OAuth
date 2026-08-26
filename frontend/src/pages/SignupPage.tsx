@@ -33,7 +33,8 @@ export const SignupPage: React.FC = () => {
   const handleGoogleLogin = () => {
     if (isGoogleLoading) return;
     setIsGoogleLoading(true);
-    window.location.href = 'http://localhost:8000/auth/oauth';
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    window.location.href = `${apiUrl}/auth/oauth`;
   };
 
   return (
