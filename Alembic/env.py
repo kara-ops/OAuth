@@ -16,6 +16,11 @@ config = context.config
 # Convert asyncpg URL to sync psycopg2 URL since alembic runs synchronously.
 db_url = os.environ.get("DATABASE_URL")
 if db_url:
+    # Render sometimes gives "postgres://" which SQLAlchemy 1.4+ rejects.
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    
+    # Alembic needs a sync driver, so strip out asyncpg if present.
     sync_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
     config.set_main_option("sqlalchemy.url", sync_url)
 
