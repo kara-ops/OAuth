@@ -34,11 +34,7 @@ def google_login(request : Request)->str:
     else:
         ip = request.client.host
 
-    call = token_service.rate_limiter(ip)
-    if not call:
-        raise HTTPException(
-            status_code = 429, detail = "Too many request"
-        )
+
 
     url = (
         f"https://accounts.google.com/o/oauth2/v2/auth"
