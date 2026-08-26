@@ -29,17 +29,38 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="animate-spin text-indigo-500" size={48} />
+      </div>
+    );
+  }
+  
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
         <Route index element={<LandingPage />} />
-        <Route path="login" element={<LoginPage />} />
-        <Route path="signup" element={<SignupPage />} />
-        <Route path="forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="reset-password" element={<ResetPasswordPage />} />
-        <Route path="oauth/callback" element={<OAuthCallback />} />
         
+        {/* Public auth routes - hidden if logged in */}
+        <Route path="login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+        <Route path="forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+        <Route path="reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
+        <Route path="oauth/callback" element={<PublicRoute><OAuthCallback /></PublicRoute>} />
+        
+        {/* Protected routes - hidden if logged out */}
         <Route 
           path="dashboard" 
           element={

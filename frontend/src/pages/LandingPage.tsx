@@ -1,44 +1,47 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
-import { ShieldCheck, Zap, Lock } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export const LandingPage: React.FC = () => {
+  const { user } = useAuth();
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] text-center">
-      <div className="mb-8 p-4 rounded-full border inline-block">
-        <ShieldCheck size={48} className="text-primary" />
+    <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4">
+      <div className="mb-8 p-5 rounded-2xl bg-primary/10 inline-block">
+        <ShieldCheck size={56} className="text-primary" />
       </div>
       
-      <h1 className="title text-4xl mb-4">
-        Simple Authentication
+      <h1 className="text-5xl font-bold tracking-tight text-gray-900 mb-6">
+        Authenticator
       </h1>
       
-      <p className="subtitle mb-8 max-w-2xl text-lg">
-        A seamless and secure authentication flow with Google OAuth, local credentials, 
-        and robust session management. Built for modern applications.
+      <p className="text-xl text-gray-500 mb-12 max-w-md mx-auto leading-relaxed">
+        Secure access to your workspace.
       </p>
       
-      <div className="flex gap-4 mb-16">
-        <Link to="/signup">
-          <Button variant="primary" className="text-lg px-8 py-3">Get Started</Button>
-        </Link>
-        <Link to="/login">
-          <Button variant="outline" className="text-lg px-8 py-3">Sign In</Button>
-        </Link>
-      </div>
-
-      <div className="flex gap-8 max-w-4xl w-full justify-center text-left mt-8">
-        <div className="card flex-1">
-          <Zap className="mb-4" size={24} />
-          <h3 className="text-xl font-bold mb-2">Lightning Fast</h3>
-          <p className="subtitle">Optimized JWT access tokens with seamless background rotation.</p>
-        </div>
-        <div className="card flex-1">
-          <Lock className="mb-4" size={24} />
-          <h3 className="text-xl font-bold mb-2">Bank-grade Security</h3>
-          <p className="subtitle">Redis-backed blacklist and secure HTTP-only cookies for maximum safety.</p>
-        </div>
+      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm mx-auto">
+        {user ? (
+          <Link to="/dashboard" className="w-full">
+            <Button variant="primary" className="w-full text-lg py-4 rounded-xl shadow-sm hover:shadow-md transition-all">
+              Go to Dashboard
+            </Button>
+          </Link>
+        ) : (
+          <>
+            <Link to="/login" className="w-full sm:w-1/2">
+              <Button variant="outline" className="w-full text-lg py-3 rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50">
+                Sign In
+              </Button>
+            </Link>
+            <Link to="/signup" className="w-full sm:w-1/2">
+              <Button variant="primary" className="w-full text-lg py-3 rounded-xl shadow-sm hover:shadow-md transition-all">
+                Create Account
+              </Button>
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

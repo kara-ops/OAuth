@@ -17,7 +17,7 @@ export const Navbar: React.FC = () => {
     <nav className="nav-header">
       <Link to="/" className="nav-brand">
         <ShieldCheck className="text-primary" size={24} />
-        <span>SecureAuth</span>
+        <span>Authenticator</span>
       </Link>
       
       <div className="flex items-center gap-4">
