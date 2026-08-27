@@ -16,7 +16,7 @@
   --error: #dc2626;
   --success: #16a34a;
   
-  --border-color: #e5e7eb;
+  --border-color: rgba(0, 0, 0, 0.08);
   --border-radius: 8px;
   --input-radius: 6px;
   --btn-radius: 6px;
