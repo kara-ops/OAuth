@@ -47,7 +47,7 @@ def google_login(request : Request)->str:
 
 @router.get("/google/callback")
 #oauth_client = oc, auth_service = a, security = s, oauth_schema = os
-async def google_callback(request:Request,res:Response,code:str, db:Session = Depends(get_db),_:None=Depends(fixed_window_rate_limiter(2,5,"google_callback",Request))):
+async def google_callback(request:Request,res:Response,code:str, db:Session = Depends(get_db),_:None=Depends(fixed_window_rate_limiter(2,5,"google_callback"))):
     try:
         access_token = await oauth_client.exchange_code_for_token(code)
         print("access_token : ", access_token)
