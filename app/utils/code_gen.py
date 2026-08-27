@@ -18,7 +18,7 @@ def user_agent_parse(user_agent:str):
     device = ""
     device_type = ""
     if ua.is_mobile:
-        device = ua.device.family
+        device = f"{ua.device.family} on {ua.os.family}" 
         device_type = "mobile"
     elif ua.is_tablet:
         device = ua.device.family
