@@ -5,8 +5,8 @@ from fastapi import HTTPException,Request
 from app.database.redis import get_redis
 from fastapi import HTTPException, Request
 
-def fixed_window_rate_limiter(limit:int,ttl:int,rate_limit_ep:str,req:Request):
-    async def dependency():
+def fixed_window_rate_limiter(limit:int,ttl:int,rate_limit_ep:str):
+    async def dependency(req:Request):
             ip = ""
             x_forwarded_for = req.headers.get("x-forwarded-for")
             if x_forwarded_for:
