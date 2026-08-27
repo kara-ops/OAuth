@@ -16,8 +16,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin text-indigo-500" size={48} />
+      <div className="flex flex-col h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="animate-spin text-primary mb-4" size={48} />
+        <div className="text-center text-gray-500 max-w-sm px-4">
+          <p className="font-medium text-gray-700 mb-1">Connecting to server...</p>
+          <p className="text-sm">If the server was asleep, this may take up to a minute to wake up.</p>
+        </div>
       </div>
     );
   }
@@ -34,8 +38,12 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin text-indigo-500" size={48} />
+      <div className="flex flex-col h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="animate-spin text-primary mb-4" size={48} />
+        <div className="text-center text-gray-500 max-w-sm px-4">
+          <p className="font-medium text-gray-700 mb-1">Connecting to server...</p>
+          <p className="text-sm">If the server was asleep, this may take up to a minute to wake up.</p>
+        </div>
       </div>
     );
   }
