@@ -6,7 +6,7 @@ from app.database.redis import get_redis
 from fastapi import HTTPException, Request
 
 def fixed_window_rate_limiter(limit:int,ttl:int,rate_limit_ep:str,req:Request):
-    async def dependency(req:Request):
+    async def dependency():
             ip = ""
             x_forwarded_for = req.headers.get("x-forwarded-for")
             if x_forwarded_for:
@@ -24,7 +24,7 @@ def fixed_window_rate_limiter(limit:int,ttl:int,rate_limit_ep:str,req:Request):
                 pipe.expire(key,ttl,nx=True)
             result = await pipe.execute()
 
-            attempts = result[0]
+            attempts = result[0] if result else 0
 
             if attempts > limit:
                 raise HTTPException(status_code=429,detail="Too many request")
