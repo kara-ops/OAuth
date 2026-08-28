@@ -82,7 +82,7 @@ async def google_callback(request:Request,res:Response,code:str, db:Session = De
         key="refresh",
         value=create_refresh,
         max_age=60*60*24*7,
-        samesite="lax",
+        samesite="none",
         httponly=True,
         secure=True
     )
@@ -106,7 +106,7 @@ async def refresh_logic(req:Request,res:Response,db:Session=Depends(get_db),_:No
         max_age=60*60*24*7,
         value=token,
         secure=True,
-        samesite="lax",
+        samesite="none",
         httponly=True,
         )
 
@@ -138,7 +138,7 @@ def logout(res:Response,authorization: str = Header()):
     if remain_ttl <0:
         remain_ttl = 0
 
-    res.delete_cookie("refresh")
+    res.delete_cookie("refresh", secure=True, samesite="none")
     return {
         "message":"logged out"
     }
@@ -162,7 +162,7 @@ async def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends
         key="refresh",
         value=login["refresh"],
         max_age=60*60*24*7,
-        samesite="lax",
+        samesite="none",
         httponly=True,
         secure=True
     )
@@ -191,7 +191,7 @@ async def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=D
         key="refresh",
         value=create["refresh"],
         max_age=60*60*24*7,
-        samesite="lax",
+        samesite="none",
         httponly=True,
         secure=True
 
