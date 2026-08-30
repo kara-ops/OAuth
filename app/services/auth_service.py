@@ -325,19 +325,20 @@ async def reset_pass(user_id:int,new_password:str,current_password:str,db:Sessio
 
     
     query = await db.execute(select(UserAuth).where(UserAuth.user_id==user_id,UserAuth.provider=="local"))
-    store = query.scalar_one_or_none()
-    auth_check = UserAuthModel.model_validate(store)
+    auth_check = query.scalar_one_or_none()
+
 
     if not auth_check:
         raise HTTPException(status_code=400,detail="login with email password first")
-    
+        
+    store= UserAuthModel.model_validate(auth_check) 
     new_pass = await run_in_threadpool(hash_password,new_password)
 
     if not verify_password(current_password,auth_check.hashed_password):
         raise HTTPException(status_code=400,detail="incorrect current password")
     
     try:
-       store.hashed_password = new_password
+       auth_check.hashed_password = new_password
 
        await db.commit()
     except:
