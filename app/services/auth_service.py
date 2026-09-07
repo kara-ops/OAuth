@@ -432,8 +432,8 @@ async def get_session(user_id:int,session_id:str,db:Session):
     await cache_user_session(user_id,session_id,session)
     return session
 
-async def refresh_token(token:str,db:Session):
-    token = await decode_token_r(token,db)
+async def refresh_token(r_token:str,db:Session):
+    token = await decode_token_r(r_token,db)
 
     
     query = await db.execute(select(UserSession).where(UserSession.session_id==token["sid"]))
