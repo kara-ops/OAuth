@@ -347,7 +347,7 @@ async def reset_pass(user_id:int,new_password:str,current_password:str,db:Sessio
 
     return {"successfully changed"}
 
-# password forgotten
+# password forgotten service currently off
 async def forgot_password(email:str,db:Session):
     query = await db.execute(select(UserAuth).join(User).where(User.email==email,UserAuth.provider=="local"))
     check = query.scalar_one_or_none()
