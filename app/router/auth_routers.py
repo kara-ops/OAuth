@@ -189,7 +189,8 @@ async def create_local_user(res:Response,req:Request,user:UserLogin,db:Session=D
     #user-agent
 
     ua = req.headers.get("User-Agent")
-
+    
+    logging.info(f"User {user.email}:{ip}:{ua} attempting to create account")
     #service call
     create = await auth_service.create_l_user(ip,ua,user.email,user.password,db)
 
