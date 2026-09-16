@@ -10,8 +10,8 @@ from app.database.redis import get_redis
 from app.router.auth_routers import router as auth_routers 
 from app.router.users import router as user_router
 
-from Getlogs.middleware import RequestIDMiddleware
-from Getlogs.config import setup_logging
+from app.Getlogs.middleware import RequestIDMiddleware
+from app.Getlogs.config import setup_logging
 
 
 setup_logging(level="INFO")
