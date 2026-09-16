@@ -37,12 +37,16 @@ async def lifespan(app:FastAPI):
 
     print("App shuting down")
 
-app.add_middleware(RequestIDMiddleware)
+
 
 
 from app.core.config import settings
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(RequestIDMiddleware)
+
+
 
 app.add_middleware(
     CORSMiddleware,

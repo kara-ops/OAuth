@@ -1,7 +1,7 @@
 import logging 
 import json 
 from datetime import datetime, timezone
-from context import get_request_id
+from app.Getlogs.context import get_request_id
 
 class JSONFormatter(logging.Formatter):
     def format(self,record: logging.LogRecord) -> str:

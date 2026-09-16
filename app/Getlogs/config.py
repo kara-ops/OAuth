@@ -1,5 +1,5 @@
 import logging
-from formatter import JSONFormatter
+from app.Getlogs.formatter import JSONFormatter
 
 
 
