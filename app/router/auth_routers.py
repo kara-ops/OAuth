@@ -23,6 +23,9 @@ from app.ratelimiter.app.dependency.tb_dependency import token_bucket_rate_limit
 from app.ratelimiter.app.dependency.fw_rate_limit import fixed_window_rate_limiter
 from app.ratelimiter.app.dependency.sl_dependency import sliding_window_rate_limiter
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags =["auth"])
 
@@ -145,16 +148,19 @@ def logout(res:Response,authorization: str = Header()):
 
 @router.post("/login")
 async def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends(get_db), _:None=Depends(sliding_window_rate_limiter(window=4,limit=1,rate_limit_ep="local_login"))):
+
     ip =""
     x_forwarded_for = req.headers.get("x-forwarded-for")
     if x_forwarded_for:
         ip = x_forwarded_for
     else:
         ip = req.client.host
-    
+     
     #user-agent
 
     ua = req.headers.get("User-Agent")
+
+    logging.info(f"User {user.email}:{ip}:{ua} attempting log into his account")
 
     login = await auth_service.login_l_user(ip,ua,user.email,user.password,db)
 

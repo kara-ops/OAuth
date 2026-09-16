@@ -2,12 +2,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from contextlib import asynccontextmanager
+import logging 
+
 from app.database.postgres import AsyncSessionlocal,get_db
 from app.database.redis import get_redis
+
 from app.router.auth_routers import router as auth_routers 
 from app.router.users import router as user_router
 
+from Getlogs.middleware import RequestIDMiddleware
+from Getlogs.config import setup_logging
 
+
+setup_logging(level="INFO")
 
 
 @asynccontextmanager
@@ -29,7 +36,8 @@ async def lifespan(app:FastAPI):
     yield
 
     print("App shuting down")
-    
+
+app.add_middleware(RequestIDMiddleware)
 
 
 from app.core.config import settings
