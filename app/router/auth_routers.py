@@ -160,7 +160,7 @@ async def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends
 
     ua = req.headers.get("User-Agent")
 
-    logging.info(f"User {user.email}:{ip}:{ua} attempting log into his account")
+    logger.info(f"User {user.email}:{ip}:{ua} attempting log into his account")
 
     login = await auth_service.login_l_user(ip,ua,user.email,user.password,db)
 
@@ -172,6 +172,8 @@ async def local_login(res:Response,req:Request,user:UserLogin,db:Session=Depends
         httponly=True,
         secure=True
     )
+
+    logger.info(f"User {user.email}:{ip}:{ua} logged in to his account {user.email}:{login['user'].id}")
     return {"access_token":login["access"],"token_type":"bearer"}
 
 @router.post("/create-user")

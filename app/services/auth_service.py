@@ -23,6 +23,9 @@ from starlette.concurrency import run_in_threadpool
 
 from time import perf_counter
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def get_or_create_user(db:Session, google_user:dict,ip:str,user_agent:str)->User:
@@ -266,6 +269,7 @@ async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Sessio
     query = await db.execute(select(User).where(User.email==email_id).options(joinedload(User.auth),joinedload(User.session)))
     store = query.unique().scalar_one_or_none()
     if not store:
+        logger.warning(f"User with email:{email_id}:ip:{ip}:user_agent:{user_agent} not found")
         raise HTTPException(status_code=400,detail="Wrong credentials")
 
     email = UserAndAuthModel.model_validate(store)
@@ -276,9 +280,11 @@ async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Sessio
         if auth.provider == "local":
             provider = "local"
     if not provider:
+        logger.warning(f"User with email:{email_id}:ip:{ip}:user_agent:{user_agent}:user_id:{email.id} no Local auth")
         raise HTTPException(status_code=400,detail="Wrong credentials")
     
     if not await run_in_threadpool(verify_password,password,hashed_password):
+        logger.warning(f"User with email:{email_id}:ip:{ip}:user_agent:{user_agent}:user_id:{email.id} no matched password")
         raise HTTPException(status_code=400,detail="Wrong credentials")
     
 
@@ -311,6 +317,7 @@ async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Sessio
         create_access = create_access_token(email.id,uuid_code)
         await delete_user_session(email.id,uuid_code)
     except:
+        logger.error(f"Session/login not created of user email:{email_id}:ip:{ip}:user_agent:{user_agent}:user_id:{email.id}")
         await db.rollback()
         raise
     
