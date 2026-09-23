@@ -14,6 +14,11 @@ from app.schemas.Oauth_schema import UserSessionModel
 
 from uuid import uuid4
 
+import logging 
+
+logger = logging.getLogger(__name__)
+
+
 
 
 def create_access_token(user_id:int,sid:str)->str:
@@ -29,6 +34,7 @@ def create_access_token(user_id:int,sid:str)->str:
         "sub" : str(user_id)
 
     }
+    logger.info(f"Access token creaeted for user_id : {user_id} : session_id : {sid} : jti : {jti} : expire : {expire}")
     return jwt.encode(payload,settings.SECRET_KEY,algorithm=settings.ALGORITHM)
 
 def create_refresh_token(user_id:int,sid:str)->str:
@@ -44,6 +50,7 @@ def create_refresh_token(user_id:int,sid:str)->str:
         "sub": str(user_id),
         "jti": jti
     }
+    logger.info(f"Refresh token created for user_id : {user_id} : session_id : {sid} : jti : {jti} : expire : {expire}")
     return jwt.encode(payload,settings.SECRET_KEY,algorithm=settings.ALGORITHM)
 
 
@@ -51,15 +58,18 @@ async def decode_token_r(token:str,db:Session)->dict:
     try:
         payload = jwt.decode(token,settings.SECRET_KEY,algorithms=settings.ALGORITHM)
     except ExpiredSignatureError:
+        logger.warning(f"Refresh token of user : {payload["sub"]} : session_id : {payload["sid"]} : iat : {payload["iat"]} : exp : {payload["exp"]} jti : {payload["jti"]} is expired")
         raise HTTPException(
             status_code = 401, detail = "Invalid or Expired Token"
         )
     except JWTError:
+        logger.warning(f"Unable to decode the refresh token {token}")
         raise HTTPException(
             status_code = 401, detail = "Invalid or Expired Token"
         )
     
     if payload["type"] != "refresh":
+        logger.warning(f"Invalid token type of user : {payload["sub"]} : session_id : {payload["sid"]} jti : {payload["jit"]}")
         raise HTTPException(status_code=400,detail="Invalid token")
     
     query = await db.execute(select(UserSession).where(UserSession.session_id==payload["sid"]))
