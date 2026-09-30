@@ -279,6 +279,7 @@ async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Sessio
         hashed_password = auth.hashed_password
         if auth.provider == "local":
             provider = "local"
+            break
     if not provider:
         logger.warning(f"User with email:{email_id}:ip:{ip}:user_agent:{user_agent}:user_id:{email.id} no Local auth")
         raise HTTPException(status_code=400,detail="Wrong credentials")
@@ -313,9 +314,9 @@ async def login_l_user(ip:str,user_agent:str,email_id:str,password:str,db:Sessio
     )
     try:
         db.add(auth_s)
-        await db.commit()
-        create_access = create_access_token(email.id,uuid_code)
         await delete_user_session(email.id,uuid_code)
+        create_access = create_access_token(email.id,uuid_code)      
+        await db.commit()
     except:
         logger.error(f"Session/login not created of user email:{email_id}:ip:{ip}:user_agent:{user_agent}:user_id:{email.id}")
         await db.rollback()

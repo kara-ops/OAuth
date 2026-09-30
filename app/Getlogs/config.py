@@ -15,9 +15,3 @@ def setup_logging(level: str = "INFO") -> None:
     
 
 setup_logging()
-
-logger = logging.getLogger("test")
-logger.info("user is testing")
-logger.error("error testing")
-logger.critical("fak this shi")
-logger.debug("this shi passes")
