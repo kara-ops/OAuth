@@ -346,7 +346,7 @@ async def reset_pass(user_id:int,new_password:str,current_password:str,db:Sessio
         raise HTTPException(status_code=400,detail="incorrect current password")
     
     try:
-       auth_check.hashed_password = new_password
+       auth_check.hashed_password = new_pass
 
        await db.commit()
     except:
